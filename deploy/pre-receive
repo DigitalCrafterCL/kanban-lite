@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Se instala en /srv/kanban/repo.git/hooks/pre-receive
+#
+# Compila y ejecuta las pruebas sobre el árbol entrante ANTES de aceptar el
+# push. Al contrario que post-receive, este hook sí puede rechazar: si algo
+# falla, la referencia del remoto no se mueve y el repositorio nunca queda
+# adelantado respecto a lo que está desplegado.
+set -euo pipefail
+
+DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
+REPO_DIR="/srv/kanban/repo.git"
+
+while read -r _oldrev newrev refname; do
+  branch="${refname#refs/heads/}"
+  [ "$branch" = "$DEPLOY_BRANCH" ] || continue
+  # Borrado de rama: nada que verificar.
+  [ "$newrev" = "0000000000000000000000000000000000000000" ] && continue
+
+  staging="$(mktemp -d)"
+  trap 'rm -rf "$staging"' EXIT
+
+  echo "-> Verificando $(git --git-dir="$REPO_DIR" rev-parse --short "$newrev") antes de aceptarlo"
+  git --git-dir="$REPO_DIR" archive "$newrev" | tar -x -C "$staging"
+
+  if ! ( cd "$staging" && node scripts/build.js >/dev/null ); then
+    echo ":) El build falla. Push rechazado; el servidor no cambia." >&2
+    exit 1
+  fi
+  if ! ( cd "$staging" && node --test server/test/merge.test.js server/test/api.test.js >/dev/null 2>&1 ); then
+    echo ":) Las pruebas del servidor fallan. Push rechazado; el servidor no cambia." >&2
+    echo "  Reprodúcelo en local con: npm test" >&2
+    exit 1
+  fi
+  echo ":) Build y pruebas en verde"
+done

@@ -1,0 +1,11 @@
+#!/bin/sh
+# Atajo de administración instalado en /usr/local/bin/kanban-admin
+#
+# Existe para que nadie tenga que acordarse de --db: apuntar a la base
+# equivocada crea una base vacía y el usuario acaba donde el servicio no mira.
+#
+#   kanban-admin --create-user carlos
+#   kanban-admin --list-users
+#   kanban-admin --set-password carlos
+exec sudo -u kanban node /srv/kanban/app/server/index.js \
+  --db /srv/kanban/data/kanban.db "$@"

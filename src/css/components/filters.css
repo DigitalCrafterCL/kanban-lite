@@ -1,0 +1,277 @@
+/* --------------- Barra de filtros --------------- */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  padding: 10px 12px;
+  margin-bottom: 18px;
+}
+
+.filters .grp {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+
+.flabel {
+  font-family: var(--font-display);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-right: 2px;
+}
+
+.sep {
+  width: 1px;
+  align-self: stretch;
+  background: var(--line-2);
+  margin: 2px 6px;
+}
+
+.chip {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: .02em;
+  border: 1px solid var(--line-2);
+  background: var(--card);
+  color: var(--ink-2);
+  padding: 5px 11px 5px 9px;
+  border-radius: 20px;
+  cursor: pointer;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  transition: all .14s;
+}
+
+.chip .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--cc, var(--muted));
+  flex: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cc, var(--muted)) 22%, transparent);
+}
+
+.chip .ct {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.chip:hover {
+  border-color: var(--cc, var(--accent));
+}
+
+.chip[aria-pressed="false"] {
+  opacity: .42;
+}
+
+.chip[aria-pressed="false"] .dot {
+  background: var(--muted);
+  box-shadow: none;
+}
+
+.chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.chip.pri {
+  padding-left: 11px;
+}
+
+.chip.pri .dot {
+  border-radius: 2px;
+}
+
+.chip.cfg {
+  border-style: dashed;
+  color: var(--muted);
+}
+
+.chip.cfg:hover {
+  color: var(--accent-2);
+  border-color: var(--accent);
+}
+
+/* --------------- Buscador rápido --------------- */
+.filter-search {
+  display: flex;
+  align-items: center;
+  position: relative;
+  margin-left: auto;
+  min-width: 200px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 9px;
+  color: var(--muted);
+  font-size: 13px;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+.search-input {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--line-2);
+  border-radius: 20px;
+  padding: 5px 28px 5px 28px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--ink);
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+.search-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.search-input::placeholder {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.search-clear {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 50%;
+  display: none;
+  line-height: 1;
+}
+
+.search-clear.visible {
+  display: block;
+}
+
+.search-clear:hover {
+  color: var(--ink);
+}
+
+.search-shortcut {
+  position: absolute;
+  right: 8px;
+  pointer-events: none;
+}
+
+@media (max-width: 768px) {
+  .filter-search {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+/* --------------- Frentes plegables --------------- */
+.grp-ws {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Desplegado, el grupo se queda la fila entera: con nueve o diez frentes las
+   píldoras se salían de la barra por la derecha en vez de envolver. */
+.grp-ws.open {
+  flex: 1 1 100%;
+}
+
+.chips-ws {
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.flabel-toggle {
+  font-family: var(--font-display);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--card);
+  border: 1px solid var(--line-2);
+  border-radius: 20px;
+  padding: 5px 9px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all .14s;
+}
+
+.flabel-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent-2);
+}
+
+.flabel-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.flabel-count {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Plegado, esto es lo único que delata que hay un filtro puesto. */
+.flabel-toggle.filtering {
+  border-color: var(--accent);
+  color: var(--accent-2);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.flabel-toggle.filtering .flabel-count {
+  color: var(--accent-2);
+}
+
+.flabel-toggle .caret {
+  font-size: 9px;
+  line-height: 1;
+  transition: transform .15s;
+}
+
+.flabel-toggle.open .caret {
+  transform: rotate(180deg);
+}
+
+.ws-clear {
+  border: 1px solid var(--line-2);
+  background: var(--card);
+  color: var(--muted);
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
+.ws-clear:hover {
+  border-color: var(--ws-sec);
+  color: var(--ws-sec);
+}

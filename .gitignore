@@ -1,0 +1,57 @@
+# -------------------------------------------------------------
+# Kanban Lite — .gitignore semilla
+# Proyecto web estático hoy; preparado para tooling Node a futuro.
+# -------------------------------------------------------------
+
+# -- Sistema operativo --
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+Desktop.ini
+
+# -- Editores / IDE --
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.claude/
+
+# -- Node / tooling (cuando se agregue un bundler) --
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+
+# -- Salida de build --
+dist/*
+!dist/index.html
+build/
+*.min.js.map
+*.min.css.map
+
+# -- Variables de entorno / secretos --
+.env
+.env.*
+!.env.example
+
+# -- Base de datos del servidor opcional --
+*.db
+*.db-wal
+*.db-shm
+
+# -- Datos locales del usuario --
+# Tableros exportados de prueba (los seeds versionados van en src/data/)
+*.local.json
+tableros-export/
+
+# -- Temporales --
+*.log
+*.tmp
+.cache/
+coverage/

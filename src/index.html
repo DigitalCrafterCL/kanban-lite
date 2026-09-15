@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kanban Lite</title>
+  <link rel="stylesheet" href="./css/main.css">
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <div class="brand">
+        <div class="brand-header-row">
+          <div class="eyebrow" id="headerEyebrow">Guía Interactiva · Primeros Pasos</div>
+          <button class="brand-edit-btn" id="editHeaderBtn" title="Personalizar título y subtítulo">✎ Editar</button>
+        </div>
+        <h1><span id="headerTitle">Kanban Lite</span><span class="thin" id="headerTitleThin"> · Tablero de Bienvenida</span></h1>
+        <div class="sub"><span id="headerSubtitle">Gestión ágil, offline-first y en un solo archivo</span> · rama <code id="branchTag">v1.0</code></div>
+      </div>
+      <div class="head-tools">
+        <!-- El estado de sincronización vive FUERA del menú: avisa de que hay
+             algo sin subir o de que el servidor no responde, y eso no puede
+             depender de que alguien abra un desplegable. -->
+        <span id="syncStatus" class="sync-status" hidden></span>
+        <div class="menu-wrap">
+          <button class="btn menu-btn" id="menuBtn" aria-haspopup="true" aria-expanded="false"
+                  aria-controls="menuPanel" title="Menú de la aplicación (M)">☰ Menú</button>
+          <div class="menu-panel" id="menuPanel" role="menu" hidden>
+            <button class="menu-item" role="menuitem" id="resetBtn" title="Cambiar de tablero o crear uno nuevo">⊞ Tableros</button>
+            <button class="menu-item" role="menuitem" id="cfgBtn" title="Configurar frentes de trabajo">⚙ Frentes</button>
+            <div class="menu-sep"></div>
+            <button class="menu-item" role="menuitem" id="pasteBtn" title="Pegar tarjetas desde el portapapeles (V)">⎗ Pegar</button>
+            <button class="menu-item" role="menuitem" id="dataBtn" title="Exportar / importar el tablero">⇅ Datos</button>
+            <button class="menu-item" role="menuitem" id="offlineBtn" title="Descargar la aplicación completa en un archivo para usarla sin conexión">⤓ Descargar app offline</button>
+            <div class="menu-sep"></div>
+            <button class="menu-item" role="menuitem" id="metricsBtn" title="Métricas de flujo del tablero: ciclo, entrega, throughput y edad del WIP">📈 Métricas</button>
+            <button class="menu-item" role="menuitem" id="logBtn" hidden title="Bitácora de cambios del tablero compartido">🕘 Bitácora</button>
+            <button class="menu-item" role="menuitem" id="trashBtn" title="Papelera del tablero: recuperar tarjetas y frentes eliminados">🗑 Papelera</button>
+            <div class="menu-sep"></div>
+            <button class="menu-item" role="menuitem" id="hotkeysBtn" title="Ver atajos de teclado (?)">⌨ Atajos</button>
+            <button class="menu-item" role="menuitem" id="themeBtn" title="Cambiar tema">◐ Tema</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="stats" id="stats"></div>
+
+    <div class="filters">
+      <!-- Los frentes vienen plegados: con muchos, la fila de píldoras se
+           desbordaba y el resto de la barra dejaba de leerse. -->
+      <div class="grp grp-ws">
+        <button class="flabel flabel-toggle" id="wsToggle" aria-expanded="false" aria-controls="wsFilters"
+                title="Mostrar u ocultar los filtros de frente">Frente <span class="flabel-count" id="wsCount"></span><span class="caret">▾</span></button>
+        <button class="ws-clear" id="wsClear" hidden title="Ver todos los frentes">✕</button>
+        <div class="grp chips-ws" id="wsFilters" hidden></div>
+      </div>
+      <div class="sep"></div>
+      <div class="grp" id="prFilters"><span class="flabel">Prioridad</span></div>
+      <div class="filter-search">
+        <span class="search-icon">🔍</span>
+        <input type="search" id="searchInput" class="search-input" placeholder="Buscar tareas... (/)" autocomplete="off">
+        <button id="searchClear" class="search-clear" title="Limpiar búsqueda">✕</button>
+      </div>
+    </div>
+
+    <div class="board" id="board"></div>
+
+    <footer class="note">
+      <b>Cómo usar este panel.</b> Arrastra una tarjeta entre columnas y <b>haz clic en ella</b> para abrir su ficha, que es donde se edita todo: título, frente, prioridad, columna, etiquetas, fecha de cierre, descripción y comentarios. Añade tareas con <b>+ Añadir tarea</b> o con la tecla <kbd>N</kbd> (que abre el formulario en <b>Backlog</b>), pega una lista del portapapeles con <kbd>Ctrl</kbd>+<kbd>V</kbd> o <kbd>V</kbd> —una línea por tarjeta—, busca con <kbd>/</kbd> y filtra con las píldoras (los frentes se despliegan pulsando <b>Frente</b>). El resto de opciones —tableros, plantillas, frentes, datos, papelera, tema y la descarga de la app para uso offline— están en <b>☰ Menú</b>. Deshaz cambios con <kbd>Ctrl+Z</kbd>; lo que elimines queda recuperable en <b>🗑 Papelera</b>. Las descripciones admiten formato mínimo —<b>negrita</b>, <i>cursiva</i>, tachado, saltos de línea y listas de subtareas <kbd>- [ ]</kbd> que se marcan desde la propia tarjeta; en la columna se ve un resumen. En la columna <b>Hecho</b>, las tarjetas se condensan como pills y se expanden al hacer clic. Todo se guarda automáticamente en <b>localStorage</b>.<br>
+    </footer>
+  </div>
+
+  <!-- --------------- Modal de edición de encabezado --------------- -->
+  <div class="overlay" id="headerOverlay" role="dialog" aria-modal="true" aria-labelledby="headerModalTitle">
+    <div class="modal">
+      <div class="modal-head">
+        <h2 id="headerModalTitle">Personalizar encabezado</h2>
+        <button class="x" id="headerClose" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="hint">Modifica los títulos y la identificación del tablero. Los cambios se guardan localmente y se incluyen al exportar el JSON.</p>
+        <div class="edit-form" style="gap:10px;">
+          <div>
+            <label class="lbl-sec" for="inputHeaderEyebrow">Epígrafe / Categoría</label>
+            <input type="text" class="ff-in" id="inputHeaderEyebrow" placeholder="P. ej. Sprint 3 · Equipo Frontend" maxlength="60">
+          </div>
+          <div>
+            <label class="lbl-sec" for="inputHeaderTitle">Título principal</label>
+            <input type="text" class="ff-in" id="inputHeaderTitle" placeholder="P. ej. Mi Proyecto" maxlength="50">
+          </div>
+          <div>
+            <label class="lbl-sec" for="inputHeaderTitleThin">Complemento del título</label>
+            <input type="text" class="ff-in" id="inputHeaderTitleThin" placeholder="P. ej. / Web &amp; APIs" maxlength="60">
+          </div>
+          <div>
+            <label class="lbl-sec" for="inputHeaderSubtitle">Subtítulo / Descripción</label>
+            <input type="text" class="ff-in" id="inputHeaderSubtitle" placeholder="P. ej. Roadmap Q3 · Entrega continua" maxlength="100">
+          </div>
+          <div>
+            <label class="lbl-sec" for="inputHeaderBranch">Etiqueta de rama / Versión</label>
+            <input type="text" class="ff-in" id="inputHeaderBranch" placeholder="P. ej. develop o v1.0" maxlength="30">
+          </div>
+          <div class="add-actions" style="margin-top:8px;">
+            <button class="btn primary wide" id="headerSave">Guardar cambios</button>
+            <button class="btn" id="headerCancel">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- --------------- Modal de configuración de frentes --------------- -->
+  <div class="overlay" id="cfgOverlay" role="dialog" aria-modal="true" aria-labelledby="cfgTitle">
+    <div class="modal">
+      <div class="modal-head">
+        <h2 id="cfgTitle">Frentes de trabajo</h2>
+        <button class="x" id="cfgClose" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="hint">Cada frente agrupa tareas por color. Renombra o recolorea en línea; al eliminar un frente con tareas, se te pedirá reasignarlas a otro. Los cambios se guardan al instante.</p>
+        <div class="ws-list" id="wsList"></div>
+        <div class="ws-add">
+          <div class="lbl">Nuevo frente</div>
+          <input type="text" class="ff-in" id="newWsName" placeholder="Nombre del frente (p. ej. Documentación)" maxlength="26">
+          <div class="swatches" id="newWsSwatches"></div>
+          <div class="row" style="align-items:center; margin-top:4px;">
+            <label style="flex:none; font-size:12px; color:var(--muted); display:flex; align-items:center; gap:7px;">Color
+              <input type="color" id="newWsColor" value="#3c74e0" style="width:38px; height:30px; border:1px solid var(--line-2); border-radius:7px; padding:0; background:none; cursor:pointer;">
+            </label>
+            <button class="btn primary" id="newWsAdd" style="justify-content:center;">+ Agregar frente</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- --------------- Modal exportar / importar --------------- -->
+  <div class="overlay" id="dataOverlay" role="dialog" aria-modal="true" aria-labelledby="dataTitle">
+    <div class="modal">
+      <div class="modal-head">
+        <h2 id="dataTitle">Exportar / Importar</h2>
+        <button class="x" id="dataClose" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="hint">Respaldo completo del tablero (tareas + frentes) en JSON. Cópialo o descárgalo para guardarlo o compartirlo entre equipos. Para restaurar, pega el JSON o elige un archivo y pulsa <b>Importar</b> — reemplaza el tablero actual.</p>
+
+        <div class="lbl-sec">Exportar</div>
+        <textarea id="exportBox" class="ff-in" readonly style="min-height:120px; font-family:'IBM Plex Mono',monospace; font-size:11px; line-height:1.45;"></textarea>
+        <div class="add-actions" style="margin:8px 0 20px;">
+          <button class="btn primary" id="copyBtn" style="justify-content:center;">⧉ Copiar</button>
+          <button class="btn" id="downloadBtn" style="justify-content:center;">⭳ Descargar .json</button>
+          <span id="copyMsg" class="copymsg"></span>
+        </div>
+
+        <div class="lbl-sec">Importar</div>
+        <textarea id="importBox" class="ff-in" placeholder="Pega aquí el JSON del tablero…" style="min-height:100px; font-family:'IBM Plex Mono',monospace; font-size:11px; line-height:1.45;"></textarea>
+        <div class="add-actions" style="margin-top:8px;">
+          <label class="btn" style="justify-content:center; cursor:pointer;">Elegir archivo…<input type="file" id="importFile" accept="application/json,.json" style="display:none;"></label>
+          <button class="btn primary" id="importBtn" style="justify-content:center;">Importar y reemplazar</button>
+        </div>
+        <p id="importMsg" class="importmsg"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- --------------- Modal de plantillas --------------- -->
+  <div class="overlay" id="templatesOverlay" role="dialog" aria-modal="true" aria-labelledby="templatesTitle">
+    <div class="modal wide">
+      <div class="modal-head">
+        <h2 id="templatesTitle">Plantillas de Tablero</h2>
+        <button class="x" id="templatesClose" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="hint">Selecciona una plantilla para comenzar rápidamente. Se reemplazará el tablero actual (puedes deshacer con <kbd>Ctrl+Z</kbd> o respaldar antes en <b>⇅ Datos</b>).</p>
+        <div class="templates-grid" id="templatesGrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- --------------- Ficha de la tarjeta --------------- -->
+  <div class="overlay" id="cardOverlay" role="dialog" aria-modal="true" aria-labelledby="cdTitle">
+    <div class="modal card-modal">
+      <!-- Fila 1: identificación de la tarjeta -->
+      <div class="cd-head">
+        <span class="cd-id" id="cdId"></span>
+        <input type="text" class="cd-title" id="cdTitle" maxlength="90" aria-label="Título de la tarjeta">
+        <select class="cd-ws" id="cdWs" aria-label="Frente de trabajo"></select>
+        <span class="cd-ro" id="cdReadOnly" hidden title="Tienes permiso de lectura en este tablero">👁 Sólo lectura</span>
+        <button class="x" id="cardClose" aria-label="Cerrar">✕</button>
+      </div>
+
+      <!-- Fila 2: trabajo a la izquierda, conversación a la derecha -->
+      <div class="cd-body">
+        <section class="cd-main">
+          <div class="cd-block">
+            <div class="lbl-sec">Etiquetas</div>
+            <div class="cd-labels" id="cdLabels"></div>
+            <input type="text" class="ff-in cd-label-input" id="cdLabelInput"
+                   placeholder="#etiqueta y Enter para añadirla" maxlength="24">
+          </div>
+
+          <div class="cd-meta-row">
+            <div class="cd-block">
+              <div class="lbl-sec">Fecha de cierre</div>
+              <input type="date" class="ff-in" id="cdDue">
+              <span class="cd-due-hint" id="cdDueHint"></span>
+            </div>
+            <div class="cd-block">
+              <div class="lbl-sec">Prioridad</div>
+              <select class="ff-in" id="cdPri"></select>
+            </div>
+            <div class="cd-block">
+              <div class="lbl-sec">Columna</div>
+              <select class="ff-in" id="cdCol"></select>
+            </div>
+          </div>
+
+          <div class="cd-block cd-desc-block">
+            <div class="lbl-sec cd-desc-lbl">
+              Descripción
+              <span class="rt-prog" id="cdProgress" hidden></span>
+              <button class="cd-mini" id="cdDescEdit" type="button">✎ Editar</button>
+            </div>
+            <div class="cd-desc cdesc rich" id="cdDesc"></div>
+            <div class="cd-desc-editor" id="cdDescEditor" hidden></div>
+          </div>
+        </section>
+
+        <aside class="cd-side">
+          <div class="lbl-sec">Comentarios <span class="cd-count" id="cdCommentCount"></span></div>
+          <div class="cd-comments" id="cdComments"></div>
+          <div class="cd-comment-new">
+            <textarea class="ff-in" id="cdCommentText" rows="3"
+                      placeholder="Escribe un comentario… (Ctrl+Enter para enviar)"></textarea>
+            <button class="btn primary" id="cdCommentAdd">Comentar</button>
+          </div>
+        </aside>
+      </div>
+
+      <div class="cd-foot">
+        <button class="btn danger" id="cdDelete">🗑 Eliminar</button>
+        <button class="btn" id="cdDone">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- --------------- Modal de atajos de teclado --------------- -->
+  <div class="overlay" id="hotkeysOverlay" role="dialog" aria-modal="true" aria-labelledby="hotkeysTitle">
+    <div class="modal">
+      <div class="modal-head">
+        <h2 id="hotkeysTitle">Atajos de Teclado</h2>
+        <button class="x" id="hotkeysClose" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <table class="hotkeys-table">
+          <tbody>
+            <tr>
+              <td><kbd>/</kbd></td>
+              <td>Enfocar buscador en tiempo real</td>
+            </tr>
+            <tr>
+              <td><kbd>N</kbd></td>
+              <td>Añadir nueva tarea en <b>Backlog</b></td>
+            </tr>
+            <tr>
+              <td><kbd>Ctrl</kbd>+<kbd>B</kbd> / <kbd>Ctrl</kbd>+<kbd>I</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd></td>
+              <td>Negrita, cursiva y tachado en la descripción de la tarjeta</td>
+            </tr>
+            <tr>
+              <td><kbd>Enter</kbd></td>
+              <td>Dentro de una lista de la descripción, continúa la lista (en un elemento vacío, la cierra)</td>
+            </tr>
+            <tr>
+              <td><kbd>Ctrl</kbd>+<kbd>V</kbd> / <kbd>V</kbd></td>
+              <td>Pegar tarjetas desde el portapapeles (una línea por tarjeta)</td>
+            </tr>
+            <tr>
+              <td><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>⌘</kbd>+<kbd>Z</kbd></td>
+              <td>Deshacer última acción (Undo)</td>
+            </tr>
+            <tr>
+              <td><kbd>Ctrl</kbd>+<kbd>Y</kbd> / <kbd>⌘</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></td>
+              <td>Rehacer acción (Redo)</td>
+            </tr>
+            <tr>
+              <td><kbd>M</kbd></td>
+              <td>Abrir el menú de la aplicación</td>
+            </tr>
+            <tr>
+              <td><kbd>Ctrl</kbd>+<kbd>Enter</kbd></td>
+              <td>Enviar el comentario que estás escribiendo en la ficha de una tarjeta</td>
+            </tr>
+            <tr>
+              <td><kbd>Esc</kbd></td>
+              <td>Cerrar modal o ficha, salir de un campo o cancelar búsqueda</td>
+            </tr>
+            <tr>
+              <td><kbd>?</kbd></td>
+              <td>Ver este menú de atajos</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- --------------- Modal: pegar tarjetas desde el portapapeles --------------- -->
+  <div class="overlay" id="pasteOverlay" role="dialog" aria-modal="true" aria-labelledby="pasteTitle">
+    <div class="modal wide">
+      <div class="modal-head">
+        <h2 id="pasteTitle">⎗ Pegar tarjetas</h2>
+        <button class="x" id="pasteClose" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="hint">Una línea, una tarjeta. Se limpian viñetas, numeración y las marcas de hora y autor que arrastra WhatsApp. Revisa la vista previa y desmarca lo que no quieras. Cada tarjeta lleva su propio frente, prioridad y columna; los selectores de arriba fijan los de toda la tanda.</p>
+        <p class="hint">También se acepta el <b>formato completo</b>, que conserva identificadores y organización — útil para volcar un tablero entero:</p>
+        <pre class="paste-format"><code># Formato por línea:  ID | WS | prioridad | col | Título | Descripción
+CORE-H01 | CORE | baja | done | Sandbox InfluxDB + FastAPI | 2025-01: origen del proyecto.</code></pre>
+        <p class="hint">Las líneas que empiezan por <code>#</code> se ignoran. La prioridad y la columna se admiten por su clave (<code>baja</code>, <code>done</code>) o por su nombre (<code>Baja</code>, <code>Hecho</code>). Un frente que el tablero no tenga se crea al importar; un ID que ya exista llega desmarcado y, si lo importas, recibe uno nuevo.</p>
+
+        <div class="lbl-sec">Texto pegado</div>
+        <textarea id="pasteRaw" class="ff-in paste-raw" placeholder="Pega aquí tu lista (Ctrl/Cmd+V)…"></textarea>
+
+        <div class="paste-controls">
+          <label class="paste-field">Frente para todas
+            <select class="ff-in" id="pasteWs"></select>
+          </label>
+          <label class="paste-field">Prioridad para todas
+            <select class="ff-in" id="pastePri"></select>
+          </label>
+          <label class="paste-field">Columna para todas
+            <select class="ff-in" id="pasteCol"></select>
+          </label>
+          <span class="paste-select-actions">
+            <button class="btn" id="pasteSelectAll">Marcar todas</button>
+            <button class="btn" id="pasteSelectNone">Desmarcar todas</button>
+          </span>
+        </div>
+
+        <div class="lbl-sec">Vista previa</div>
+        <div id="pasteList" class="paste-list"></div>
+
+        <div class="add-actions" style="margin-top:10px;">
+          <button class="btn primary wide" id="pasteImport">Importar</button>
+          <button class="btn" id="pasteCancel">Cancelar</button>
+        </div>
+        <p id="pasteMsg" class="importmsg"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- --------------- Modal: bitácora del tablero compartido --------------- -->
+  <div class="overlay" id="logOverlay" role="dialog" aria-modal="true" aria-labelledby="logTitle">
+    <div class="modal wide">
+      <div class="modal-head">
+        <h2 id="logTitle">🕘 Bitácora de cambios</h2>
+        <button class="x" id="logClose" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="hint">Quién cambió qué en este tablero compartido, de lo más reciente a lo más antiguo. Se reconstruye en el servidor comparando las versiones archivadas, así que refleja el estado real del tablero. <span id="logSubtitle" class="log-subtitle"></span></p>
+        <div class="add-actions" style="margin-bottom:10px;">
+          <button class="btn" id="logReload">↻ Actualizar</button>
+        </div>
+        <div id="logList" class="log-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- --------------- Modal: métricas de flujo --------------- -->
+  <div class="overlay" id="metricsOverlay" role="dialog" aria-modal="true" aria-labelledby="metricsTitle">
+    <div class="modal wide">
+      <div class="modal-head">
+        <h2 id="metricsTitle">📈 Métricas de flujo</h2>
+        <button class="x" id="metricsClose" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="hint">Se calculan sobre <b>todas</b> las tarjetas del tablero, no sobre las que dejan ver los filtros: un WIP que baja al filtrar por frente mentiría sobre la carga real del equipo. <b>Ciclo</b> mide desde que la tarjeta entra en trabajo hasta que se cierra; <b>Entrega</b>, desde que se creó.</p>
+        <div class="add-actions" style="margin-bottom:10px;">
+          <button class="btn" id="metricsReload">↻ Actualizar</button>
+        </div>
+        <div id="metricsBody" class="mt-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- --------------- Modal: papelera del tablero --------------- -->
+  <div class="overlay" id="trashOverlay" role="dialog" aria-modal="true" aria-labelledby="trashTitle">
+    <div class="modal wide">
+      <div class="modal-head">
+        <h2 id="trashTitle">🗑 Papelera del tablero</h2>
+        <button class="x" id="trashClose" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="hint">Las tarjetas y los frentes que eliminas se guardan aquí, en este navegador, hasta que los restaures o vacíes la papelera. Al restaurar un frente vuelven con él las tareas que se reasignaron, si nadie las movió entretanto. Los tableros eliminados se recuperan en <b>⊞ Tableros</b>.</p>
+        <div id="trashList" class="trash-list"></div>
+        <div class="add-actions" style="margin-top:12px;">
+          <button class="btn danger" id="trashEmpty">Vaciar papelera</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- --------------- Modal selector de tableros --------------- -->
+  <div class="overlay" id="boardSelectorOverlay" role="dialog" aria-modal="true" aria-labelledby="boardSelectorTitle">
+    <div class="modal">
+      <div class="modal-head">
+        <h2 id="boardSelectorTitle">⊞ Tus Tableros</h2>
+        <button class="x" id="boardSelectorClose" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="hint">Selecciona un tablero para trabajar o crea uno nuevo. Cada tablero guarda sus datos de forma independiente en tu navegador. Con <b>⧉</b> clonas un tablero: uno nuevo con los mismos frentes y tarjetas, todas en <b>Backlog</b> —sin comentarios ni fechas de cierre, que son del ciclo anterior—. El clon es siempre local, aunque el original sea compartido.</p>
+        <div id="boardList" class="bs-list"></div>
+        <div class="bs-new">
+          <div class="lbl-sec">Nuevo tablero en este navegador</div>
+          <div class="bs-new-row">
+            <input type="text" class="ff-in" id="newBoardName" placeholder="Nombre del tablero (p. ej. Trabajo, Personal…)" maxlength="40">
+            <button class="btn primary" id="newBoardCreate">+ Crear</button>
+          </div>
+        </div>
+
+        <div class="bs-trash" id="deletedBoardsSection" hidden>
+          <div class="lbl-sec">Tableros eliminados</div>
+          <p class="hint">Siguen guardados en este navegador con todo su contenido. Restáuralos para volver a usarlos, o elimínalos definitivamente para liberar espacio — eso último no se puede deshacer.</p>
+          <div id="deletedBoards" class="bs-list"></div>
+        </div>
+
+        <div class="bs-servers">
+          <div class="lbl-sec">Tableros compartidos</div>
+          <p class="hint">Opcional. Conéctate a un servidor de equipo para trabajar sobre los mismos tableros que tus compañeros. La app funciona igual sin esto, y los tableros que ya descargaste siguen abriendo sin conexión.</p>
+          <div id="serverList" class="srv-list"></div>
+          <details class="bs-connect">
+            <summary>+ Conectar a un servidor</summary>
+            <div class="bs-connect-form">
+              <input type="text" class="ff-in" id="srvUrl" placeholder="Dirección (p. ej. 192.168.1.50:8090)" autocomplete="off">
+              <div class="bs-connect-row">
+                <input type="text" class="ff-in" id="srvUser" placeholder="Usuario" autocomplete="username">
+                <input type="password" class="ff-in" id="srvPass" placeholder="Contraseña" autocomplete="current-password">
+              </div>
+              <button class="btn primary" id="srvConnect">Conectar</button>
+              <p id="srvMsg" class="importmsg"></p>
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- --------------- Modal: sincronización frenada --------------- -->
+  <div class="overlay" id="blockedOverlay" role="dialog" aria-modal="true" aria-labelledby="blockedTitle">
+    <div class="modal">
+      <div class="modal-head">
+        <h2 id="blockedTitle">⚠ Sincronización frenada</h2>
+        <button class="x" id="blockedClose" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="hint" id="blockedMsg"></p>
+        <p class="hint">El servidor ha frenado el envío porque borraría la mayor parte del tablero compartido. Casi siempre significa que esta copia local quedó desincronizada, no que quieras borrarlo todo. Elige con cuidado:</p>
+        <div class="blocked-actions">
+          <button class="btn primary wide" id="blockedDiscard">Descartar mis cambios y traer el tablero del servidor</button>
+          <p class="hint blocked-hint">Opción segura. Se pierde lo que hubieras hecho en este navegador sin subir, pero el tablero compartido queda intacto.</p>
+          <button class="btn danger wide" id="blockedForce">Subir de todos modos y borrar esos elementos</button>
+          <p class="hint blocked-hint">Sólo si de verdad querías eliminar todo eso. Afecta a todo el equipo. El estado anterior queda archivado en el servidor y el dueño puede restaurarlo.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- --------------- Modal de miembros de un tablero compartido --------------- -->
+  <div class="overlay" id="membersOverlay" role="dialog" aria-modal="true" aria-labelledby="membersTitle">
+    <div class="modal">
+      <div class="modal-head">
+        <h2 id="membersTitle">Miembros de <span id="membersBoardName"></span></h2>
+        <button class="x" id="membersClose" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="hint">Quien tenga <b>edición</b> puede modificar el tablero; con <b>sólo lectura</b> puede verlo pero no cambiarlo. Los usuarios se crean en el servidor con <code>--create-user</code>.</p>
+        <div id="membersList" class="members-list"></div>
+        <div class="bs-new">
+          <div class="lbl-sec">Invitar</div>
+          <div class="bs-new-row">
+            <input type="text" class="ff-in" id="memberName" placeholder="Nombre de usuario" maxlength="32" autocomplete="off">
+            <select class="ff-in" id="memberRole">
+              <option value="write">Edición</option>
+              <option value="read">Sólo lectura</option>
+            </select>
+            <button class="btn primary" id="memberAdd">Invitar</button>
+          </div>
+          <p id="membersMsg" class="importmsg"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,413 @@
+/* --------------- Ficha de la tarjeta (modal central) --------------- */
+/* A diferencia del resto de modales, este es un sitio para trabajar: se
+   centra en pantalla, ocupa el ancho útil y hace scroll por dentro para que
+   la cabecera y el pie no se muevan. */
+#cardOverlay {
+  align-items: center;
+  padding: 24px 16px;
+}
+
+.card-modal {
+  max-width: 1080px;
+  border-left: 4px solid var(--wc, var(--accent));
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 48px);
+}
+
+/* -- Fila 1: identificación -- */
+.cd-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  background: var(--card-hi);
+}
+
+.cd-id {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: .02em;
+  color: var(--wc, var(--accent));
+  background: color-mix(in srgb, var(--wc, var(--accent)) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--wc, var(--accent)) 35%, transparent);
+  border-radius: 6px;
+  padding: 4px 8px;
+  flex: none;
+}
+
+.cd-title {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+
+.cd-title:hover {
+  border-color: var(--line-2);
+}
+
+.cd-title:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+  background: var(--panel);
+  border-color: var(--accent);
+}
+
+.cd-ws {
+  flex: none;
+  max-width: 180px;
+  font-family: var(--font-display);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--wc, var(--ink-2));
+  background: var(--card);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  padding: 7px 8px;
+}
+
+/* -- Fila 2: dos columnas -- */
+.cd-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 0;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.cd-main {
+  padding: 14px 18px 18px;
+  overflow-y: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cd-side {
+  border-left: 1px solid var(--line);
+  background: var(--card-hi);
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.cd-block .lbl-sec {
+  margin: 0 0 6px;
+}
+
+.cd-meta-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+/* -- Etiquetas -- */
+.cd-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 7px;
+  min-height: 22px;
+  align-items: center;
+}
+
+.cd-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent-2);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 999px;
+  padding: 2px 4px 2px 8px;
+}
+
+.cd-label-del {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 10px;
+  line-height: 1;
+  padding: 2px 3px;
+  border-radius: 999px;
+}
+
+.cd-label-del:hover {
+  color: var(--ws-sec);
+  background: color-mix(in srgb, var(--ws-sec) 15%, transparent);
+}
+
+.cd-label-input {
+  font-size: 12px;
+}
+
+.cd-empty {
+  font-size: 12px;
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* -- Fecha de cierre -- */
+.cd-due-hint {
+  display: block;
+  margin-top: 5px;
+  font-family: var(--font-display);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.cd-due-hint.cd-due-soon {
+  color: var(--pr-alta);
+}
+
+.cd-due-hint.cd-due-late {
+  color: var(--pr-critica);
+}
+
+/* -- Descripción -- */
+.cd-desc-block {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.cd-desc-lbl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cd-mini {
+  margin-left: auto;
+  font-family: var(--font-display);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: none;
+  color: var(--ink-2);
+  background: var(--card);
+  border: 1px solid var(--line-2);
+  border-radius: 7px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.cd-mini:hover {
+  border-color: var(--accent);
+  color: var(--accent-2);
+}
+
+.cd-desc {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  padding: 12px 14px;
+  min-height: 140px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+/* En la ficha hay sitio: el texto enriquecido se lee más grande que en la
+   tarjeta de la columna. */
+.cd-desc.rich .rt-p {
+  margin: 0 0 6px;
+}
+
+.cd-desc.rich .rt-check {
+  width: 14px;
+  height: 14px;
+}
+
+.cd-desc.rich .rt-task {
+  padding: 2px 0;
+}
+
+.cd-desc-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.cd-desc-input {
+  font-size: 12.5px;
+  line-height: 1.55;
+  resize: vertical;
+  min-height: 160px;
+}
+
+.cd-desc-actions {
+  margin-top: 2px;
+}
+
+/* -- Comentarios -- */
+.cd-count {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--accent-2);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-radius: 999px;
+  padding: 1px 6px;
+  margin-left: 4px;
+}
+
+.cd-comments {
+  flex: 1;
+  min-height: 120px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 2px;
+  margin-bottom: 10px;
+}
+
+.cd-comment {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  padding: 8px 10px;
+}
+
+.cd-comment-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.cd-comment-by {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .03em;
+  color: var(--ink);
+}
+
+.cd-comment-at {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--muted);
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.cd-comment-body {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  word-break: break-word;
+}
+
+.cd-comment-new {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.cd-comment-new textarea {
+  resize: vertical;
+  min-height: 58px;
+  font-size: 12.5px;
+}
+
+.cd-comment-new .btn {
+  justify-content: center;
+}
+
+/* -- Pie -- */
+.cd-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--line);
+  background: var(--card-hi);
+}
+
+.cd-foot .btn:last-child {
+  margin-left: auto;
+}
+
+@media (max-width: 900px) {
+  .cd-body {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+
+  .cd-main,
+  .cd-side {
+    overflow: visible;
+  }
+
+  .cd-side {
+    border-left: none;
+    border-top: 1px solid var(--line);
+  }
+
+  .cd-comments {
+    max-height: 260px;
+  }
+}
+
+@media (max-width: 640px) {
+  .cd-head {
+    flex-wrap: wrap;
+  }
+
+  .cd-title {
+    order: 3;
+    flex-basis: 100%;
+  }
+}
+
+/* -- Sólo lectura -- */
+.cd-ro {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  background: var(--panel);
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  padding: 4px 8px;
+  white-space: nowrap;
+  flex: none;
+}
+
+.card-modal .cd-title:disabled,
+.card-modal select:disabled,
+.card-modal input:disabled {
+  opacity: 1;
+  color: var(--ink-2);
+  background: transparent;
+  border-color: transparent;
+  cursor: default;
+}
+
+.card-modal select:disabled,
+.card-modal input[type="date"]:disabled {
+  border-color: var(--line);
+  background: var(--card);
+}

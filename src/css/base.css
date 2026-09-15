@@ -1,0 +1,72 @@
+* {
+  box-sizing: border-box;
+}
+
+/* El `display` de un componente gana siempre al `[hidden] { display: none }`
+   del navegador: las reglas de autor pesan más que las del agente de usuario,
+   por especificidad que tengan. Sin esto, poner `el.hidden = true` sobre algo
+   que declara `display: flex` (el editor de la descripción, el botón de la
+   bitácora) no lo esconde. */
+[hidden] {
+  display: none !important;
+}
+
+html, body {
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+.wrap {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 22px 0px 60px;
+}
+
+footer.note {
+  margin-top: 26px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+
+footer.note b {
+  color: var(--ink-2);
+  font-weight: 600;
+}
+
+kbd {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: var(--card);
+  border: 1px solid var(--line-2);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  padding: 1px 5px;
+  color: var(--ink-2);
+}
+
+@media (max-width: 640px) {
+  .wrap {
+    padding: 16px 12px 50px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+  .card:hover {
+    transform: none;
+  }
+}

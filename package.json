@@ -1,0 +1,27 @@
+{
+  "name": "kanban-lite",
+  "version": "0.1.0",
+  "description": "Tablero Kanban ligero, offline-first y de un solo archivo",
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/dev.js",
+    "build": "node scripts/build.js",
+    "preview": "node scripts/build.js && node -e \"import('node:http').then(h=>import('node:fs').then(f=>h.createServer((_,r)=>{r.writeHead(200,{'Content-Type':'text/html'});f.createReadStream('dist/index.html').pipe(r);}).listen(8080,()=>console.log('Preview: http://localhost:8080'))))\"",
+    "server": "node server/index.js",
+    "test": "node --test server/test/merge.test.js server/test/api.test.js server/test/richtext.test.js",
+    "test:browser": "node scripts/build.js && node test/local.mjs && node test/shared.mjs && node test/destructivo.mjs && node test/pestanas.mjs",
+    "test:all": "npm test && npm run test:browser"
+  },
+  "keywords": [
+    "kanban",
+    "offline-first",
+    "single-file",
+    "vanilla-js",
+    "self-hosted"
+  ],
+  "author": "Víctor Garrido",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  }
+}

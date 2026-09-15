@@ -1,0 +1,39 @@
+# Servicio del backend opcional de Kanban Lite.
+# Se instala en /etc/systemd/system/kanban.service — ver deploy/README.md
+[Unit]
+Description=Kanban Lite — servidor de tableros compartidos
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=kanban
+Group=kanban
+WorkingDirectory=/srv/kanban/app
+ExecStart=/usr/bin/env node /srv/kanban/app/server/index.js \
+  --db /srv/kanban/data/kanban.db \
+  --host 0.0.0.0 \
+  --port 8090 \
+  --serve
+Restart=on-failure
+RestartSec=3
+
+# La base de datos es lo unico que el servicio necesita escribir.
+ReadWritePaths=/srv/kanban/data
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6
+LockPersonality=true
+MemoryDenyWriteExecute=false
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=kanban
+
+[Install]
+WantedBy=multi-user.target

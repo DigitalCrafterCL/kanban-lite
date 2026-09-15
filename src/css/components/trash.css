@@ -1,0 +1,102 @@
+/* --- Papelera del tablero y tableros eliminados ----------------------- */
+
+.head-tools .btn.has-items {
+  border-color: var(--pr-alta);
+  color: var(--pr-alta);
+}
+
+.trash-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  max-height: 55vh;
+  overflow-y: auto;
+}
+
+.trash-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 11px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-s);
+  background: var(--card);
+}
+
+.trash-info {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.trash-kind {
+  flex: none;
+  font-size: 10px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid var(--line-2);
+  border-radius: 5px;
+  padding: 1px 5px;
+}
+
+.trash-title {
+  font-size: 12.5px;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.trash-id {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.trash-when {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.trash-restore,
+.bs-restore {
+  flex: none;
+  font-size: 11.5px;
+  padding: 5px 10px;
+}
+
+/* Un tablero en la papelera: presente, pero claramente fuera de servicio */
+.bs-item.bs-deleted {
+  opacity: .82;
+  border-style: dashed;
+}
+
+.bs-item.bs-deleted:hover {
+  opacity: 1;
+  border-color: var(--line-2);
+}
+
+.bs-name-static {
+  cursor: default;
+  background: none;
+  border: 0;
+  text-align: left;
+}
+
+.bs-trash {
+  margin: 18px 0 4px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--line-2);
+}
+
+.srv-trash {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line-2);
+}

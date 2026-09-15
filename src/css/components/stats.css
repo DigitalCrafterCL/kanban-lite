@@ -1,0 +1,97 @@
+/* --------------- Tira de métricas --------------- */
+/* El número de tiles dejó de estar clavado en el CSS: con los KPI de flujo son
+   nueve, y auto-fit los reparte sin tocar la rejilla cada vez. */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.stat {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--sc, var(--accent));
+}
+
+.stat .n {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 26px;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.stat .l {
+  font-size: 11px;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.stat .n small {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* Un KPI fuera de rango: el borde acompaña a la barra lateral, que ya se tiñe
+   con --sc desde el JS. */
+.stat-alert {
+  border-color: var(--pr-critica);
+}
+
+.stat-alert .n {
+  color: var(--pr-critica);
+}
+
+/* Barra de ocupación del WIP contra la suma de límites. */
+.stat-bar {
+  position: absolute;
+  left: 3px;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--line);
+}
+
+.stat-bar::after {
+  content: "";
+  display: block;
+  height: 100%;
+  width: var(--w, 0%);
+  background: var(--sc, var(--accent));
+}
+
+@media (max-width: 640px) {
+  .stats {
+    grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  }
+
+  .stat {
+    padding: 9px 10px;
+  }
+
+  .stat .n {
+    font-size: 20px;
+  }
+}

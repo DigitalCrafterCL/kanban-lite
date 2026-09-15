@@ -1,0 +1,88 @@
+:root {
+  /* -- Neutrales fríos con sesgo azul-pizarra -- */
+  --bg:        #e7ecf2;
+  --board:     #dde3ec;
+  --panel:     #f3f6fa;
+  --card:      #ffffff;
+  --card-hi:   #f8fafc;
+  --ink:       #16202c;
+  --ink-2:     #3c4a5a;
+  --muted:     #64738a;
+  --line:      #d3dae4;
+  --line-2:    #c3ccd9;
+  --accent:    #0a8fa6;
+  --accent-2:  #0a7285;
+  --accent-ink:#ffffff;
+  --shadow:    0 1px 2px rgba(20,32,46,.06), 0 4px 14px rgba(20,32,46,.06);
+  --shadow-lg: 0 10px 34px rgba(20,32,46,.16);
+  --overlay:   rgba(18,26,36,.44);
+
+  /* -- Prioridad -- */
+  --pr-critica: #e0484d;
+  --pr-alta:    #de8412;
+  --pr-media:   #3c74e0;
+  --pr-baja:    #6b7a90;
+
+  --ws-sec:  #e0484d;
+  --ws-rad:  #0c9a8a;
+
+  --radius: 13px;
+  --radius-s: 9px;
+
+  /* -- Tipografía (fuentes locales, ver fonts.css) -- */
+  --font-ui:      "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Chakra Petch", "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono:    "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:        #0a0f16;
+    --board:     #0c131c;
+    --panel:     #111a24;
+    --card:      #16212e;
+    --card-hi:   #1b2836;
+    --ink:       #e8eef5;
+    --ink-2:     #b7c4d3;
+    --muted:     #7e8ea2;
+    --line:      #223142;
+    --line-2:    #2c3f53;
+    --accent:    #1fc0d8;
+    --accent-2:  #46d0e4;
+    --accent-ink:#04121a;
+    --shadow:    0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.36);
+    --shadow-lg: 0 14px 40px rgba(0,0,0,.55);
+    --overlay:   rgba(0,0,0,.6);
+    --pr-critica:#ff6266;
+    --pr-alta:   #f0a63a;
+    --pr-media:  #6f9dff;
+    --pr-baja:   #8494a8;
+    --ws-sec:  #ff6266;
+    --ws-rad:  #2ec4b2;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg:        #0a0f16;
+  --board:     #0c131c;
+  --panel:     #111a24;
+  --card:      #16212e;
+  --card-hi:   #1b2836;
+  --ink:       #e8eef5;
+  --ink-2:     #b7c4d3;
+  --muted:     #7e8ea2;
+  --line:      #223142;
+  --line-2:    #2c3f53;
+  --accent:    #1fc0d8;
+  --accent-2:  #46d0e4;
+  --accent-ink:#04121a;
+  --shadow:    0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.36);
+  --shadow-lg: 0 14px 40px rgba(0,0,0,.55);
+  --overlay:   rgba(0,0,0,.6);
+  --pr-critica:#ff6266;
+  --pr-alta:   #f0a63a;
+  --pr-media:  #6f9dff;
+  --pr-baja:   #8494a8;
+  --ws-sec:  #ff6266;
+  --ws-rad:  #2ec4b2;
+}

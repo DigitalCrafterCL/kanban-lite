@@ -1,0 +1,228 @@
+/* -- Indicador de sincronización en la cabecera -- */
+.sync-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  white-space: nowrap;
+}
+
+.sync-status::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+.sync-status.is-synced  { color: var(--ws-rad); }
+.sync-status.is-pending { color: var(--pr-alta); }
+.sync-status.is-syncing { color: var(--accent); }
+.sync-status.is-offline { color: var(--muted); }
+.sync-status.is-blocked {
+  color: var(--pr-critica);
+  border-color: var(--pr-critica);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.sync-status.is-blocked:hover { background: var(--card-hi); }
+
+.blocked-actions { display: flex; flex-direction: column; gap: 4px; margin-top: 14px; }
+.blocked-actions .btn { justify-content: center; }
+.blocked-hint { margin: 2px 0 14px; font-size: 12px; }
+
+.sync-status.is-auth,
+.sync-status.is-error   { color: var(--pr-critica); border-color: var(--pr-critica); }
+
+.sync-status.is-syncing::before {
+  animation: sync-pulse 1s ease-in-out infinite;
+}
+
+@keyframes sync-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .25; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sync-status.is-syncing::before { animation: none; }
+}
+
+/* -- Sección de servidores dentro del selector de tableros -- */
+.bs-servers {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.srv-list { display: flex; flex-direction: column; gap: 12px; margin: 12px 0; }
+
+.srv-block {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.srv-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--card-hi);
+}
+
+.srv-user {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.srv-url {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.srv-actions { margin-left: auto; display: flex; gap: 6px; flex: none; }
+
+.srv-btn {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-2);
+  background: var(--card);
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  padding: 4px 9px;
+  cursor: pointer;
+}
+
+.srv-btn:hover { border-color: var(--accent); color: var(--accent); }
+.srv-btn:disabled { opacity: .5; cursor: default; }
+
+.srv-boards { padding: 6px 8px; }
+.srv-boards .bs-item { border: none; background: none; padding: 7px 6px; }
+.srv-boards .bs-item + .bs-item { border-top: 1px solid var(--line); }
+
+.srv-new {
+  display: flex;
+  gap: 7px;
+  padding: 9px 12px;
+  border-top: 1px solid var(--line);
+  align-items: center;
+}
+
+.srv-new input { flex: 1; min-width: 0; }
+.srv-new .btn { flex: none; justify-content: center; }
+
+.bs-connect { margin-top: 6px; }
+
+.bs-connect > summary {
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  padding: 6px 0;
+  list-style: none;
+}
+
+.bs-connect > summary::-webkit-details-marker { display: none; }
+.bs-connect > summary:hover { color: var(--accent-2); }
+
+.bs-connect-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  background: var(--panel);
+}
+
+.bs-connect-row { display: flex; gap: 8px; }
+.bs-connect-row input { flex: 1; min-width: 0; }
+.bs-connect-form .btn { justify-content: center; }
+
+/* -- Distintivo de tablero compartido -- */
+.bs-badge {
+  display: inline-block;
+  margin-left: 8px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 1px 5px;
+  vertical-align: middle;
+}
+
+.bs-empty.err { color: var(--pr-critica); }
+
+/* -- Miembros -- */
+.members-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.member-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  background: var(--card);
+}
+
+.member-row + .member-row { border-top: 1px solid var(--line); }
+
+.member-name {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.member-role {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  margin-left: auto;
+}
+
+.member-row .bs-delete { flex: none; }
+
+#memberRole { flex: none; width: auto; }
+
+@media (max-width: 640px) {
+  .srv-head { flex-wrap: wrap; }
+  .srv-actions { margin-left: 0; width: 100%; }
+  .bs-connect-row { flex-direction: column; }
+}
+
+/* Sólo lectura: no es un error ni un aviso urgente, es el modo del tablero. */
+.sync-status.is-readonly {
+  color: var(--ink-2);
+  border-color: var(--line-2);
+  background: var(--card-hi);
+}

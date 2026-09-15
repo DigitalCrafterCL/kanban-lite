@@ -1,0 +1,98 @@
+/* --- Bitácora de cambios (tableros compartidos) ----------------------- */
+
+.log-subtitle {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.log-entry {
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-s);
+  background: var(--card);
+  padding: 9px 12px 10px;
+}
+
+.log-head {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  margin-bottom: 6px;
+  padding-bottom: 5px;
+  border-bottom: 1px dashed var(--line);
+}
+
+.log-author {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.log-when {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.log-version {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--muted);
+  border: 1px solid var(--line-2);
+  border-radius: 5px;
+  padding: 1px 5px;
+}
+
+.log-changes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.log-change {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.log-change code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.log-change b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.log-verb {
+  display: inline-block;
+  width: 16px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.log-add .log-verb    { color: var(--ws-rad); }
+.log-move .log-verb   { color: var(--accent); }
+.log-delete .log-verb { color: var(--pr-critica); }
+.log-comment .log-verb { color: var(--pr-media); }
+
+.log-more {
+  color: var(--muted);
+  font-style: italic;
+}

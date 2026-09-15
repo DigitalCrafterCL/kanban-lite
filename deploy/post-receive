@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Hook de despliegue. Se instala en /srv/kanban/repo.git/hooks/post-receive
+#
+# Vuelca la rama desplegada en el arbol de trabajo, compila el frontend y
+# reinicia el servicio. La base de datos vive fuera del arbol, en
+# /srv/kanban/data, asi que ningun despliegue la toca.
+set -euo pipefail
+
+DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
+REPO_DIR="/srv/kanban/repo.git"
+WORK_TREE="/srv/kanban/app"
+SERVICE="kanban"
+
+while read -r _oldrev newrev refname; do
+  branch="${refname#refs/heads/}"
+  if [ "$branch" != "$DEPLOY_BRANCH" ]; then
+    echo "-> Rama '$branch' recibida; sólo se despliega '$DEPLOY_BRANCH'. Sin cambios."
+    continue
+  fi
+
+  echo "-> Desplegando $branch ($(git --git-dir="$REPO_DIR" rev-parse --short "$newrev"))"
+  mkdir -p "$WORK_TREE"
+  git --git-dir="$REPO_DIR" --work-tree="$WORK_TREE" checkout -f "$newrev"
+
+  echo "-> Compilando el frontend"
+  ( cd "$WORK_TREE" && node scripts/build.js )
+
+  # El build y las pruebas ya se verificaron en pre-receive: si fallaran, este
+  # hook no llegaría a ejecutarse porque el push habría sido rechazado.
+
+  echo "-> Reiniciando $SERVICE"
+  if [ "$(id -u)" -eq 0 ]; then
+    systemctl restart "$SERVICE"
+  else
+    sudo -n systemctl restart "$SERVICE"
+  fi
+
+  sleep 1
+  if systemctl is-active --quiet "$SERVICE"; then
+    echo "[ok] Desplegado. Estado: $(systemctl is-active "$SERVICE")"
+  else
+    echo "[error] El servicio no arrancó. Revisa: journalctl -u $SERVICE -n 50"
+    exit 1
+  fi
+done

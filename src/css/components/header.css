@@ -1,0 +1,237 @@
+/* --------------- Cabecera --------------- */
+header.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 18px 26px;
+  margin-bottom: 20px;
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  position: relative;
+}
+
+.brand-header-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-edit-btn {
+  opacity: 0;
+  background: var(--card);
+  border: 1px solid var(--line-2);
+  border-radius: 7px;
+  font-size: 11px;
+  font-family: var(--font-display);
+  color: var(--muted);
+  cursor: pointer;
+  padding: 3px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all .15s;
+}
+
+.brand:hover .brand-edit-btn,
+.brand:focus-within .brand-edit-btn {
+  opacity: 1;
+}
+
+.brand-edit-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent-2);
+}
+
+.eyebrow {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--accent-2);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.eyebrow::before {
+  content: "";
+  width: 22px;
+  height: 2px;
+  background: var(--accent);
+  display: inline-block;
+  border-radius: 2px;
+}
+
+h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(24px, 3.4vw, 34px);
+  letter-spacing: -.01em;
+  margin: 0;
+  line-height: 1.05;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+h1 .thin {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.sub {
+  color: var(--muted);
+  font-size: 13.5px;
+  margin-top: 2px;
+}
+
+.sub code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent-2);
+  padding: 1px 6px;
+  border-radius: 5px;
+}
+
+.head-tools {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: .04em;
+  color: var(--ink-2);
+  background: var(--card);
+  border: 1px solid var(--line-2);
+  padding: 8px 13px;
+  border-radius: 9px;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  transition: border-color .15s, color .15s, background .15s;
+}
+
+.btn:hover {
+  border-color: var(--accent);
+  color: var(--accent-2);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.btn.danger:hover {
+  border-color: var(--ws-sec);
+  color: var(--ws-sec);
+}
+
+.btn.armed {
+  border-color: var(--ws-sec);
+  color: var(--ws-sec);
+  background: color-mix(in srgb, var(--ws-sec) 12%, transparent);
+}
+
+.btn.primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+
+.btn.primary:hover {
+  background: var(--accent-2);
+  border-color: var(--accent-2);
+  color: var(--accent-ink);
+}
+
+@media (max-width: 640px) {
+  .head-tools {
+    width: 100%;
+    margin-left: 0;
+  }
+  .brand-edit-btn {
+    opacity: 0.8;
+  }
+}
+
+/* --------------- Menú de la barra superior --------------- */
+.menu-wrap {
+  position: relative;
+}
+
+.menu-btn.open {
+  border-color: var(--accent);
+  color: var(--accent-2);
+}
+
+.menu-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 40;
+  min-width: 232px;
+  background: var(--panel);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-s);
+  box-shadow: var(--shadow-lg);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.menu-item {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 12.5px;
+  letter-spacing: .02em;
+  text-align: left;
+  color: var(--ink-2);
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  padding: 9px 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  transition: background .13s, color .13s;
+}
+
+.menu-item:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent-2);
+}
+
+.menu-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.menu-sep {
+  height: 1px;
+  background: var(--line);
+  margin: 5px 8px;
+}
+
+@media (max-width: 640px) {
+  .menu-panel {
+    right: auto;
+    left: 0;
+  }
+}

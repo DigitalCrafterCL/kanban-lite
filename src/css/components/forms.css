@@ -1,0 +1,151 @@
+/* --------------- Formularios (añadir / editar) --------------- */
+.add-btn {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 11.5px;
+  letter-spacing: .05em;
+  color: var(--muted);
+  background: transparent;
+  border: 1px dashed var(--line-2);
+  border-radius: var(--radius-s);
+  padding: 9px;
+  cursor: pointer;
+  transition: all .14s;
+  width: 100%;
+}
+
+.add-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent-2);
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+}
+
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.add-form {
+  display: none;
+  flex-direction: column;
+  gap: 7px;
+  background: var(--card);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-s);
+  padding: 10px;
+}
+
+.add-form.open {
+  display: flex;
+}
+
+.ff-in,
+.add-form input,
+.add-form select,
+.add-form textarea,
+.edit-form input,
+.edit-form select,
+.edit-form textarea {
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--line-2);
+  border-radius: 7px;
+  padding: 7px 8px;
+  width: 100%;
+}
+
+.add-form textarea,
+.edit-form textarea {
+  resize: vertical;
+  min-height: 42px;
+}
+
+.ff-in:focus,
+.add-form input:focus,
+.add-form select:focus,
+.add-form textarea:focus,
+.edit-form input:focus,
+.edit-form select:focus,
+.edit-form textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+  border-color: var(--accent);
+}
+
+.row {
+  display: flex;
+  gap: 7px;
+}
+
+.row > * {
+  flex: 1;
+}
+
+.add-actions {
+  display: flex;
+  gap: 7px;
+}
+
+.add-actions .btn {
+  flex: 1;
+  justify-content: center;
+}
+
+.add-actions .btn.wide {
+  flex: 2;
+}
+
+/* --------------- Barra de formato del texto enriquecido --------------- */
+.rt-bar {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+.rt-btn {
+  width: 24px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid var(--line-2);
+  background: var(--card-hi);
+  color: var(--ink-2);
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-size: 11.5px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  transition: all .13s;
+}
+
+.rt-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent-2);
+  background: color-mix(in srgb, var(--accent) 12%, var(--card));
+}
+
+.rt-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.rt-btn.rt-b { font-weight: 700; }
+.rt-btn.rt-i { font-style: italic; }
+.rt-btn.rt-s { text-decoration: line-through; }
+
+.rt-hint {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: .01em;
+  color: var(--muted);
+  margin-left: auto;
+  opacity: .8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

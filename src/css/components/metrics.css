@@ -1,0 +1,133 @@
+/* --------------- Panel de métricas de flujo --------------- */
+/* Los gráficos son barras de CSS puro para mantener cero dependencias. */
+
+.mt-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mt-tiles {
+  margin-bottom: 0;
+  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+}
+
+.mt-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.mt-block {
+  min-width: 0;
+}
+
+.mt-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.mt-bar-row {
+  display: grid;
+  grid-template-columns: 62px 1fr 26px;
+  align-items: center;
+  gap: 8px;
+}
+
+.mt-bar-lbl {
+  font-size: 10.5px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.mt-bar-track {
+  background: var(--line);
+  border-radius: 3px;
+  height: 10px;
+  overflow: hidden;
+}
+
+.mt-bar-fill {
+  display: block;
+  height: 100%;
+  width: var(--w, 0%);
+  min-width: 2px;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+.mt-tramos .mt-bar-fill {
+  background: var(--pr-alta);
+}
+
+.mt-bar-n {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--ink-2);
+}
+
+.mt-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 6px;
+  font-size: 12.5px;
+}
+
+.mt-table th {
+  text-align: left;
+  font-size: 10px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--line-2);
+}
+
+.mt-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-2);
+}
+
+.mt-table .mt-num {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.mt-table tr.mt-over td {
+  color: var(--pr-critica);
+  font-weight: 600;
+}
+
+.mt-aviso {
+  margin: 0;
+  font-size: 12px;
+  color: var(--pr-critica);
+  border-left: 3px solid var(--pr-critica);
+  padding-left: 9px;
+}
+
+.mt-nota,
+.mt-vacio {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  .mt-cols {
+    grid-template-columns: 1fr;
+  }
+
+  .mt-table {
+    font-size: 11.5px;
+  }
+}
