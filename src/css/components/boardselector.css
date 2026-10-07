@@ -133,6 +133,20 @@
   margin-bottom: 7px;
 }
 
+/* Aviso de que un tablero local no sale del navegador: mismo ámbar que el
+   envejecimiento del WIP, para que se lea como advertencia y no como ayuda. */
+.bs-local-warn {
+  margin: 0 0 9px;
+  padding: 7px 10px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--ink);
+  border: 1px solid color-mix(in srgb, var(--pr-alta) 45%, transparent);
+  border-left: 3px solid var(--pr-alta);
+  background: color-mix(in srgb, var(--pr-alta) 10%, transparent);
+  border-radius: 6px;
+}
+
 .bs-new-row {
   display: flex;
   gap: 8px;

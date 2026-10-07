@@ -78,6 +78,9 @@ try {
     bar.querySelector('input').value='Equipo'; bar.querySelector('button').click();`);
   await carlos.waitFor(async () => (await carlos.status()).startsWith("is-"), "indicador de sincronización");
   check(true, "al abrir un tablero compartido aparece el indicador");
+  check(await carlos.ev("return document.getElementById('templatesOverlay').classList.contains('open')"),
+    "un tablero compartido recién creado ofrece las plantillas, como uno local");
+  await carlos.ev("document.getElementById('templatesClose').click()");
 
   for (const title of ["Tarea de Carlos", "Tarea compartida"]) {
     await addCard(carlos, "todo", title);

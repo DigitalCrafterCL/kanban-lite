@@ -2521,6 +2521,20 @@ h1 .thin {
   margin-bottom: 7px;
 }
 
+/* Aviso de que un tablero local no sale del navegador: mismo ámbar que el
+   envejecimiento del WIP, para que se lea como advertencia y no como ayuda. */
+.bs-local-warn {
+  margin: 0 0 9px;
+  padding: 7px 10px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--ink);
+  border: 1px solid color-mix(in srgb, var(--pr-alta) 45%, transparent);
+  border-left: 3px solid var(--pr-alta);
+  background: color-mix(in srgb, var(--pr-alta) 10%, transparent);
+  border-radius: 6px;
+}
+
 .bs-new-row {
   display: flex;
   gap: 8px;
@@ -3750,6 +3764,7 @@ CORE-H01 | CORE | baja | done | Sandbox InfluxDB + FastAPI | 2025-01: origen del
         <div id="boardList" class="bs-list"></div>
         <div class="bs-new">
           <div class="lbl-sec">Nuevo tablero en este navegador</div>
+          <p class="bs-local-warn">⚠ Sólo existirá en este navegador: no lo verás desde otro equipo ni otro navegador, ni lo verá nadie más, y se pierde si se borran los datos del sitio. Para compartirlo, créalo en un servidor (<b>Tableros compartidos</b>, más abajo).</p>
           <div class="bs-new-row">
             <input type="text" class="ff-in" id="newBoardName" placeholder="Nombre del tablero (p. ej. Trabajo, Personal…)" maxlength="40">
             <button class="btn primary" id="newBoardCreate">+ Crear</button>
@@ -9971,7 +9986,7 @@ function armTwoStep(button, armedLabel, onConfirm) {
 
 // -- Abrir un tablero remoto ------------------------------------------------
 
-async function openRemoteBoard(server, board) {
+async function openRemoteBoard(server, board, isNew) {
   const existing = findRemoteEntry(server.id, board.id);
 
   // Si ya lo teníamos descargado, se abre tal cual y la sincronización normal
@@ -10032,7 +10047,7 @@ async function openRemoteBoard(server, board) {
     return;
   }
   writeSnapshot(slug, state);
-  finishOpen(slug);
+  finishOpen(slug, isNew);
 }
 
 function hasLocalCopy(slug) {
@@ -10062,9 +10077,9 @@ function omit(obj, key) {
   return out;
 }
 
-function finishOpen(slug) {
+function finishOpen(slug, isNew) {
   setActiveSlug(slug);
-  if (typeof _onBoardOpened === "function") _onBoardOpened(slug);
+  if (typeof _onBoardOpened === "function") _onBoardOpened(slug, Boolean(isNew));
 }
 
 // -- Crear y borrar tableros remotos ----------------------------------------
@@ -10091,7 +10106,9 @@ function promptNewRemoteBoard(server, block) {
       const created = await createRemoteBoard(server, name, blankState(name));
       bar.remove();
       showToast('Tablero compartido "' + name + '" creado', "success");
-      await openRemoteBoard(server, Object.assign({ role: "owner", ownerName: server.username }, created.board));
+      // Igual que un tablero local recién creado: abre en blanco y ofrece las
+      // plantillas. La elegida sube al servidor con la sincronización normal.
+      await openRemoteBoard(server, Object.assign({ role: "owner", ownerName: server.username }, created.board), true);
     } catch (err) {
       showToast(describeError(err), "error", 6000);
       createBtn.disabled = false;
@@ -11527,13 +11544,18 @@ function initApp() {
 
   // Un tablero compartido llega con su estado ya descargado y su instantánea
   // escrita, así que sólo hay que adoptarlo y arrancar la sincronización.
-  function onRemoteBoardOpened() {
+  // Si se acaba de crear en el servidor, se ofrecen las plantillas como en
+  // uno local.
+  function onRemoteBoardOpened(slug, isNew) {
     resetStore();
     initStore();
     resetFilters();
     refreshAll();
     closeBoardSelector();
     activateSync();
+    if (isNew) {
+      openTemplatesModal();
+    }
   }
 
   function activateSync() {

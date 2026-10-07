@@ -170,13 +170,18 @@ export function initApp() {
 
   // Un tablero compartido llega con su estado ya descargado y su instantánea
   // escrita, así que sólo hay que adoptarlo y arrancar la sincronización.
-  function onRemoteBoardOpened() {
+  // Si se acaba de crear en el servidor, se ofrecen las plantillas como en
+  // uno local.
+  function onRemoteBoardOpened(slug, isNew) {
     resetStore();
     initStore();
     resetFilters();
     refreshAll();
     closeBoardSelector();
     activateSync();
+    if (isNew) {
+      openTemplatesModal();
+    }
   }
 
   function activateSync() {

@@ -409,7 +409,7 @@ function armTwoStep(button, armedLabel, onConfirm) {
 
 // -- Abrir un tablero remoto ------------------------------------------------
 
-export async function openRemoteBoard(server, board) {
+export async function openRemoteBoard(server, board, isNew) {
   const existing = findRemoteEntry(server.id, board.id);
 
   // Si ya lo teníamos descargado, se abre tal cual y la sincronización normal
@@ -470,7 +470,7 @@ export async function openRemoteBoard(server, board) {
     return;
   }
   writeSnapshot(slug, state);
-  finishOpen(slug);
+  finishOpen(slug, isNew);
 }
 
 function hasLocalCopy(slug) {
@@ -500,9 +500,9 @@ function omit(obj, key) {
   return out;
 }
 
-function finishOpen(slug) {
+function finishOpen(slug, isNew) {
   setActiveSlug(slug);
-  if (typeof _onBoardOpened === "function") _onBoardOpened(slug);
+  if (typeof _onBoardOpened === "function") _onBoardOpened(slug, Boolean(isNew));
 }
 
 // -- Crear y borrar tableros remotos ----------------------------------------
@@ -529,7 +529,9 @@ function promptNewRemoteBoard(server, block) {
       const created = await createRemoteBoard(server, name, blankState(name));
       bar.remove();
       showToast('Tablero compartido "' + name + '" creado', "success");
-      await openRemoteBoard(server, Object.assign({ role: "owner", ownerName: server.username }, created.board));
+      // Igual que un tablero local recién creado: abre en blanco y ofrece las
+      // plantillas. La elegida sube al servidor con la sincronización normal.
+      await openRemoteBoard(server, Object.assign({ role: "owner", ownerName: server.username }, created.board), true);
     } catch (err) {
       showToast(describeError(err), "error", 6000);
       createBtn.disabled = false;

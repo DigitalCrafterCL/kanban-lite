@@ -17,6 +17,8 @@ try {
     "sin tableros se abre el selector");
   check(await page.ev("return document.getElementById('boardSelectorClose').style.visibility === 'hidden'"),
     "no se puede cerrar el selector sin elegir tablero");
+  check(await page.ev("return /Sólo existirá en este navegador/.test(document.querySelector('.bs-local-warn')?.textContent || '')"),
+    "crear un tablero local avisa de que sólo vive en este navegador");
 
   // -- Primer tablero: el catálogo de plantillas y el tutorial --
   // Desde que las plantillas se gatillan sólo al crear, el tablero nuevo nace
