@@ -2,6 +2,7 @@ import { COLS } from "./config.js";
 import { getState } from "./store.js";
 import { isVisible } from "./filters.js";
 import { flowMetrics } from "./metrics.js";
+import { esc } from "./utils.js";
 
 // Un KPI sin historia detrás se escribe "—", nunca "0": un cero dice "el
 // equipo no entrega nada" donde la verdad es "aún no hay datos".
@@ -29,10 +30,16 @@ export function updateStats() {
   const m = flowMetrics(state.cards);
   const anejas = m.aging.late;
 
+  // Nombre y color de cada columna salen del tablero: se pueden renombrar.
+  const colInfo = {};
+  COLS.forEach(function (c) { colInfo[c.key] = c; });
+  const colName = function (k) { return esc(colInfo[k] ? colInfo[k].name : k); };
+  const colColor = function (k) { return colInfo[k] ? colInfo[k].kc : "var(--muted)"; };
+
   const tiles = [
     { l: "Total visibles", n: total, sc: "var(--accent)" },
     { l: "Pendientes",     n: pend,  sc: "var(--muted)" },
-    { l: "Por hacer",      n: byCol.todo, sc: "var(--pr-media)" },
+    { l: colName("todo"), n: byCol.todo, sc: colColor("todo") },
     {
       l: "WIP", n: m.wip, sc: "var(--accent)",
       small: m.wipLimit ? "/ " + m.wipLimit : "",
@@ -42,7 +49,7 @@ export function updateStats() {
       alert: m.over.length > 0,
       title: m.over.length
         ? "Por encima del límite: " + m.over.join(", ")
-        : "Trabajo en curso (En progreso + Bloqueado) sobre la suma de límites"
+        : "Trabajo en curso (" + colInfo.inprogress.name + " + " + colInfo.blocked.name + ") sobre la suma de límites"
     },
     {
       l: "Throughput", n: m.throughput7, sc: "var(--ws-rad)", small: "/ 7 d",
@@ -61,8 +68,8 @@ export function updateStats() {
         ? "Tarjetas en curso por encima de " + num(m.aging.umbral.late, 1) + " días en su columna"
         : "Más añeja: " + m.aging.maxId + " con " + num(m.aging.max, 1) + " días · umbral " + num(m.aging.umbral.late, 1) + " d"
     },
-    { l: "Bloqueado",      n: byCol.blocked, sc: "var(--ws-sec)" },
-    { l: "Hecho",          n: byCol.done, sc: "var(--ws-rad)", grand: grand }
+    { l: colName("blocked"), n: byCol.blocked, sc: colColor("blocked") },
+    { l: colName("done"), n: byCol.done, sc: colColor("done"), grand: grand }
   ];
 
   const el = document.getElementById("stats");

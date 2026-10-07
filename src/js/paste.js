@@ -12,7 +12,7 @@
 // Nada se importa sin que el usuario vea antes qué va a entrar y pueda
 // desmarcar lo que no quiera: pegar es fácil de hacer sin querer.
 
-import { PRI, COLS, PALETTE, MAX_DESC } from "./config.js";
+import { PRI, COLS, DEFAULT_COLS, PALETTE, MAX_DESC } from "./config.js";
 import { getState, saveState, nextId, pushHistory, getStateSlug } from "./store.js";
 import { getActiveSlug } from "./boardselector.js";
 import { showToast } from "./toast.js";
@@ -34,14 +34,19 @@ const COMMENT_LINE = /^\s*(?:#|\/\/)/;
 
 // El nombre de la columna también se acepta escrito ("Por hacer", "Hecho"),
 // que es como sale de un tablero leído por una persona.
-const COL_ALIASES = {};
-COLS.forEach(function (c) {
-  COL_ALIASES[c.key.toLowerCase()] = c.key;
-  COL_ALIASES[c.name.toLowerCase()] = c.key;
-});
-COL_ALIASES["doing"] = "inprogress";
-COL_ALIASES["in progress"] = "inprogress";
-COL_ALIASES["todo"] = "todo";
+// Se reconstruye en cada uso: el tablero puede haber renombrado sus columnas,
+// y los nombres de fábrica se siguen aceptando.
+function colAliases() {
+  const aliases = {};
+  DEFAULT_COLS.concat(COLS).forEach(function (c) {
+    aliases[c.key.toLowerCase()] = c.key;
+    aliases[normalizeText(c.name)] = c.key;
+  });
+  aliases["doing"] = "inprogress";
+  aliases["in progress"] = "inprogress";
+  aliases["todo"] = "todo";
+  return aliases;
+}
 
 const PRI_ALIASES = {};
 Object.keys(PRI).forEach(function (k) {
@@ -59,7 +64,7 @@ function asPriority(value) {
 }
 
 function asColumn(value) {
-  return COL_ALIASES[normalizeText(value)] || null;
+  return colAliases()[normalizeText(value)] || null;
 }
 
 // Formato completo: ID | WS | prioridad | col | Título | Descripción

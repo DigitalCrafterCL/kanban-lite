@@ -1,4 +1,4 @@
-import { SEED_REV, DEFAULT_META, normalizeStamps } from "./config.js";
+import { SEED_REV, DEFAULT_META, normalizeStamps, normalizeCols } from "./config.js";
 import { getState, setState, pushHistory, applyMigrations } from "./store.js";
 import { resetFilters } from "./filters.js";
 import { showToast } from "./toast.js";
@@ -52,7 +52,8 @@ export function exportPayload() {
     exported: new Date().toISOString(),
     meta: state.meta || clone(DEFAULT_META),
     ws: state.ws,
-    cards: state.cards
+    cards: state.cards,
+    cols: state.cols
   };
 }
 
@@ -264,12 +265,14 @@ function handleImport() {
   // revisión al día pero venga sin sellos (editado a mano, o exportado de un
   // tablero de otra persona) no dispararía ningún parche y entraría sin
   // fechas.
-  setState(normalizeStamps(applyMigrations({
+  const imported = {
     meta: data.meta || clone(DEFAULT_META),
     cards: cards,
     ws: ws,
     rev: data.rev || SEED_REV
-  })), true);
+  };
+  if (Array.isArray(data.cols)) imported.cols = normalizeCols(data.cols);
+  setState(normalizeStamps(applyMigrations(imported)), true);
 
   resetFilters();
   if (typeof onIoStateChangedCallback === "function") {

@@ -28,6 +28,7 @@
           <div class="menu-panel" id="menuPanel" role="menu" hidden>
             <button class="menu-item" role="menuitem" id="resetBtn" title="Cambiar de tablero o crear uno nuevo">⊞ Tableros</button>
             <button class="menu-item" role="menuitem" id="cfgBtn" title="Configurar frentes de trabajo">⚙ Frentes</button>
+            <button class="menu-item" role="menuitem" id="colsBtn" title="Nombre, orden y color de las columnas del tablero">▥ Columnas</button>
             <div class="menu-sep"></div>
             <button class="menu-item" role="menuitem" id="pasteBtn" title="Pegar tarjetas desde el portapapeles (V)">⎗ Pegar</button>
             <button class="menu-item" role="menuitem" id="dataBtn" title="Exportar / importar el tablero">⇅ Datos</button>
@@ -442,6 +443,42 @@ CORE-H01 | CORE | baja | done | Sandbox InfluxDB + FastAPI | 2025-01: origen del
               <p id="srvMsg" class="importmsg"></p>
             </div>
           </details>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- --------------- Modal de columnas del tablero --------------- -->
+  <div class="overlay" id="colsOverlay" role="dialog" aria-modal="true" aria-labelledby="colsTitle">
+    <div class="modal">
+      <div class="modal-head">
+        <h2 id="colsTitle">Columnas del tablero</h2>
+        <button class="x" id="colsClose" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="hint">Renombra, recolorea y ordena las columnas de izquierda a derecha con ◀ ▶. Cada columna conserva su papel en el flujo (espera, en curso, bloqueado, hecho), así que las métricas no cambian. Los cambios se guardan al instante y, en un tablero compartido, los ve todo el equipo.</p>
+        <div class="ws-list" id="colsList"></div>
+        <button class="btn" id="colsReset" style="justify-content:center;">↺ Restablecer nombres, orden y colores de fábrica</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- --------------- Modal: reconciliar tras reconectar --------------- -->
+  <div class="overlay" id="conflictOverlay" role="dialog" aria-modal="true" aria-labelledby="conflictTitle">
+    <div class="modal modal-wide">
+      <div class="modal-head">
+        <h2 id="conflictTitle">⚠ Cambios en conflicto</h2>
+        <button class="x" id="conflictClose" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="hint" id="conflictIntro"></p>
+        <div class="conflict-bulk">
+          <button class="btn" id="conflictAllMine">Quedarme con todo lo mío</button>
+          <button class="btn" id="conflictAllTheirs">Quedarme con todo lo del servidor</button>
+        </div>
+        <div class="conflict-list" id="conflictList"></div>
+        <div class="conflict-foot">
+          <button class="btn primary" id="conflictApply">Aplicar y sincronizar</button>
         </div>
       </div>
     </div>

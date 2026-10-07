@@ -23,8 +23,10 @@ import {
 } from "./boardselector.js";
 import {
   initSync, scheduleSync, refreshSyncStatus, onSyncStatus, syncNow,
-  getDestructiveBlock, discardLocalAndPull, forceDestructiveSync
+  getDestructiveBlock, discardLocalAndPull, forceDestructiveSync, expireStaleSessions
 } from "./sync.js";
+import { initColumnsModal } from "./columns.js";
+import { initConflictsModal, openConflicts } from "./conflicts.js";
 import { showToast } from "./toast.js";
 import { initServers } from "./servers.js";
 
@@ -36,7 +38,9 @@ const SYNC_LABELS = {
   auth:    "sesión expirada",
   error:   "error de sincronización",
   readonly: "👁 sólo lectura",
-  blocked: "⚠ frenada — pulsa aquí"
+  blocked: "⚠ frenada — pulsa aquí",
+  detached: "desconectado — reconectar",
+  conflict: "⚠ conflictos — decidir"
 };
 
 function renderSyncBadge(status, detail) {
@@ -73,6 +77,9 @@ function initBlockedModal(onResolved) {
   if (badge) {
     badge.addEventListener("click", function () {
       if (badge.classList.contains("is-blocked")) abrir();
+      if (badge.classList.contains("is-conflict")) openConflicts();
+      // Desconectado: el selector de tableros tiene el botón para volver a entrar.
+      if (badge.classList.contains("is-detached")) openBoardSelector();
     });
   }
   if (cerrar) cerrar.addEventListener("click", cerrarModal);
@@ -195,6 +202,11 @@ export function initApp() {
   });
   setSaveHook(scheduleSync);
   initSync(refreshAll);
+  // Sesiones caducadas por reloj mientras la app estaba cerrada: sus tableros
+  // pasan a locales ya, sin esperar a que falle una petición.
+  expireStaleSessions();
+  initColumnsModal(refreshAll);
+  initConflictsModal();
   initHeader(refreshAll);
   initFrentesModal(refreshAll);
   initDataModals(refreshAll);

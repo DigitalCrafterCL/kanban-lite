@@ -9,7 +9,7 @@
     "preview": "node scripts/build.js && node -e \"import('node:http').then(h=>import('node:fs').then(f=>h.createServer((_,r)=>{r.writeHead(200,{'Content-Type':'text/html'});f.createReadStream('dist/index.html').pipe(r);}).listen(8080,()=>console.log('Preview: http://localhost:8080'))))\"",
     "server": "node server/index.js",
     "test": "node --test server/test/merge.test.js server/test/api.test.js server/test/richtext.test.js",
-    "test:browser": "node scripts/build.js && node test/local.mjs && node test/shared.mjs && node test/destructivo.mjs && node test/pestanas.mjs",
+    "test:browser": "node scripts/build.js && node test/local.mjs && node test/shared.mjs && node test/destructivo.mjs && node test/pestanas.mjs && node test/reconexion.mjs",
     "test:all": "npm test && npm run test:browser"
   },
   "keywords": [

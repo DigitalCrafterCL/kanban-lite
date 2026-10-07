@@ -1879,6 +1879,18 @@ h1 .thin {
   margin-right: 4px;
 }
 
+/* -- Columnas del tablero -- */
+.col-row .col-pos {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  width: 14px;
+  text-align: center;
+  flex: none;
+}
+
+.col-row .del:disabled { opacity: .35; cursor: default; }
+
 /* --------------- Ficha de la tarjeta (modal central) --------------- */
 /* A diferencia del resto de modales, este es un sitio para trabajar: se
    centra en pantalla, ocupa el ancho útil y hace scroll por dentro para que
@@ -2749,6 +2761,82 @@ h1 .thin {
   background: var(--card-hi);
 }
 
+/* -- Tablero desconectado del servidor y reconciliación -- */
+.bs-badge-detached { color: var(--pr-alta); border-color: var(--pr-alta); }
+
+.sync-status.is-detached {
+  color: var(--pr-alta);
+  border-color: var(--pr-alta);
+  cursor: pointer;
+}
+
+.sync-status.is-conflict {
+  color: var(--pr-critica);
+  border-color: var(--pr-critica);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.sync-status.is-detached:hover,
+.sync-status.is-conflict:hover { background: var(--card-hi); }
+
+.srv-reconnect { border-top: none; padding: 4px 6px 0; }
+.srv-reconnect-msg { margin: 4px 6px 6px; }
+.srv-reconnect-msg.err { color: var(--pr-critica); }
+
+.modal.modal-wide { max-width: 760px; width: 100%; }
+
+.conflict-bulk { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.conflict-bulk .btn { justify-content: center; }
+
+.conflict-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+
+.conflict-item {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  background: var(--card);
+  padding: 10px 12px;
+}
+
+.conflict-head {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+
+.conflict-head code { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-right: 6px; }
+
+.conflict-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.conflict-opt {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  border: 1px solid var(--line-2);
+  border-radius: 7px;
+  padding: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--ink-2);
+  min-width: 0;
+}
+
+.conflict-opt:has(input:checked) { border-color: var(--accent); background: var(--card-hi); }
+.conflict-opt input { margin-top: 2px; flex: none; }
+.conflict-opt .co-body { min-width: 0; overflow-wrap: anywhere; }
+.conflict-opt b { display: block; font-family: var(--font-display); font-size: 12px; color: var(--ink); margin-bottom: 3px; }
+.conflict-opt .co-field { display: block; color: var(--muted); }
+.conflict-opt .co-field span { color: var(--ink-2); }
+
+.conflict-foot { display: flex; justify-content: flex-end; }
+.conflict-foot .btn { justify-content: center; }
+
+@media (max-width: 640px) {
+  .conflict-options { grid-template-columns: 1fr; }
+}
+
 /* --- Pegar tarjetas desde el portapapeles ---------------------------- */
 
 .paste-raw {
@@ -3275,6 +3363,7 @@ h1 .thin {
           <div class="menu-panel" id="menuPanel" role="menu" hidden>
             <button class="menu-item" role="menuitem" id="resetBtn" title="Cambiar de tablero o crear uno nuevo">⊞ Tableros</button>
             <button class="menu-item" role="menuitem" id="cfgBtn" title="Configurar frentes de trabajo">⚙ Frentes</button>
+            <button class="menu-item" role="menuitem" id="colsBtn" title="Nombre, orden y color de las columnas del tablero">▥ Columnas</button>
             <div class="menu-sep"></div>
             <button class="menu-item" role="menuitem" id="pasteBtn" title="Pegar tarjetas desde el portapapeles (V)">⎗ Pegar</button>
             <button class="menu-item" role="menuitem" id="dataBtn" title="Exportar / importar el tablero">⇅ Datos</button>
@@ -3694,6 +3783,42 @@ CORE-H01 | CORE | baja | done | Sandbox InfluxDB + FastAPI | 2025-01: origen del
     </div>
   </div>
 
+  <!-- --------------- Modal de columnas del tablero --------------- -->
+  <div class="overlay" id="colsOverlay" role="dialog" aria-modal="true" aria-labelledby="colsTitle">
+    <div class="modal">
+      <div class="modal-head">
+        <h2 id="colsTitle">Columnas del tablero</h2>
+        <button class="x" id="colsClose" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="hint">Renombra, recolorea y ordena las columnas de izquierda a derecha con ◀ ▶. Cada columna conserva su papel en el flujo (espera, en curso, bloqueado, hecho), así que las métricas no cambian. Los cambios se guardan al instante y, en un tablero compartido, los ve todo el equipo.</p>
+        <div class="ws-list" id="colsList"></div>
+        <button class="btn" id="colsReset" style="justify-content:center;">↺ Restablecer nombres, orden y colores de fábrica</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- --------------- Modal: reconciliar tras reconectar --------------- -->
+  <div class="overlay" id="conflictOverlay" role="dialog" aria-modal="true" aria-labelledby="conflictTitle">
+    <div class="modal modal-wide">
+      <div class="modal-head">
+        <h2 id="conflictTitle">⚠ Cambios en conflicto</h2>
+        <button class="x" id="conflictClose" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="hint" id="conflictIntro"></p>
+        <div class="conflict-bulk">
+          <button class="btn" id="conflictAllMine">Quedarme con todo lo mío</button>
+          <button class="btn" id="conflictAllTheirs">Quedarme con todo lo del servidor</button>
+        </div>
+        <div class="conflict-list" id="conflictList"></div>
+        <div class="conflict-foot">
+          <button class="btn primary" id="conflictApply">Aplicar y sincronizar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- --------------- Modal: sincronización frenada --------------- -->
   <div class="overlay" id="blockedOverlay" role="dialog" aria-modal="true" aria-labelledby="blockedTitle">
     <div class="modal">
@@ -3777,21 +3902,71 @@ const seedData = {
 // Cycle Time aún no corre), "flow" y "blocked" son trabajo en curso —bloqueado
 // cuenta como WIP: el trabajo empezó y el reloj sigue corriendo— y "done" es
 // el final. Una columna nueva sin `stage` se trata como "queue".
-const COLS = [
+//
+// Éstas son las columnas de fábrica. Cada tablero puede renombrarlas,
+// reordenarlas y recolorearlas (ver applyBoardCols), pero las claves y su
+// etapa son fijas: de ellas dependen las tarjetas y las métricas.
+const DEFAULT_COLS = Object.freeze([
   { key: "backlog",    name: "Backlog",     kc: "var(--muted)",    wipLimit: 0, stage: "queue" },
   { key: "todo",       name: "Por hacer",   kc: "var(--pr-media)", wipLimit: 0, stage: "queue" },
   { key: "inprogress", name: "En progreso", kc: "var(--accent)",   wipLimit: 6, stage: "flow" },
   { key: "blocked",    name: "Bloqueado",   kc: "var(--ws-sec)",   wipLimit: 4, stage: "blocked" },
   { key: "done",       name: "Hecho",       kc: "var(--ws-rad)",   wipLimit: 0, stage: "done" }
-];
+].map(Object.freeze));
+
+// Columnas del tablero en memoria, en su orden. Es un arreglo VIVO: store.js
+// lo reescribe en su sitio cada vez que cambia el estado, así que quien lo
+// recorra ve siempre los nombres, el orden y los colores del tablero activo.
+const COLS = DEFAULT_COLS.map(function (c) { return Object.assign({}, c); });
+
+const MAX_COL_NAME = 30;
+const HEX_COLOR = /^#[0-9a-f]{6}$/i;
+
+// Normaliza la personalización de columnas de un tablero (`state.cols`):
+// sólo claves conocidas, sin duplicados, y las que falten se añaden al final
+// con sus valores de fábrica. Devuelve [{ key, name, color }], donde
+// `color` vacío significa «el de fábrica».
+function normalizeCols(raw) {
+  const out = [];
+  const seen = new Set();
+  const byKey = {};
+  DEFAULT_COLS.forEach(function (c) { byKey[c.key] = c; });
+  (Array.isArray(raw) ? raw : []).forEach(function (c) {
+    if (!c || !byKey[c.key] || seen.has(c.key)) return;
+    seen.add(c.key);
+    const name = typeof c.name === "string" ? c.name.trim().slice(0, MAX_COL_NAME) : "";
+    out.push({
+      key: c.key,
+      name: name || byKey[c.key].name,
+      color: typeof c.color === "string" && HEX_COLOR.test(c.color) ? c.color.toLowerCase() : ""
+    });
+  });
+  DEFAULT_COLS.forEach(function (c) {
+    if (!seen.has(c.key)) out.push({ key: c.key, name: c.name, color: "" });
+  });
+  return out;
+}
+
+// Vuelca en COLS la personalización de un tablero (o la de fábrica si no
+// tiene ninguna).
+function applyBoardCols(raw) {
+  const byKey = {};
+  DEFAULT_COLS.forEach(function (c) { byKey[c.key] = c; });
+  const next = normalizeCols(raw).map(function (c) {
+    const def = byKey[c.key];
+    return Object.assign({}, def, { name: c.name, color: c.color, kc: c.color || def.kc });
+  });
+  COLS.splice(0, COLS.length, ...next);
+  return COLS;
+}
 
 // Etapa de una columna por su clave. Vive aquí y no en metrics.js porque
 // normalizeStamps() la necesita y config.js no importa nada: si el rellenado
 // de sellos viviera en metrics.js habría ciclo de módulos (metrics.js importa
 // COLS).
 function colStage(key) {
-  for (let i = 0; i < COLS.length; i++) {
-    if (COLS[i].key === key) return COLS[i].stage || "queue";
+  for (let i = 0; i < DEFAULT_COLS.length; i++) {
+    if (DEFAULT_COLS[i].key === key) return DEFAULT_COLS[i].stage || "queue";
   }
   return "queue";
 }
@@ -4691,6 +4866,15 @@ function serverId(url, username) {
   return normalizeUrl(url) + "#" + String(username || "").trim().toLowerCase();
 }
 
+// La sesión caducó (por reloj o porque el servidor respondió 401). Se olvida
+// el token pero se conserva el servidor: así la interfaz puede ofrecer volver
+// a entrar con la dirección y el usuario ya puestos.
+function markSessionExpired(id) {
+  const server = getServer(id);
+  if (!server) return null;
+  return upsertServer({ id: id, token: "", expiresAt: 0, expired: true });
+}
+
 function isSessionValid(server) {
   return Boolean(server && server.token && (!server.expiresAt || server.expiresAt > Date.now()));
 }
@@ -4765,7 +4949,8 @@ async function login(url, username, password) {
     username: r.data.user.username,
     userId: r.data.user.id,
     token: r.data.token,
-    expiresAt: r.data.expiresAt
+    expiresAt: r.data.expiresAt,
+    expired: false
   });
 }
 
@@ -5128,6 +5313,13 @@ function renderBoardList() {
       badge.className = "bs-badge";
       badge.textContent = "compartido";
       nameBtn.appendChild(badge);
+    } else if (b.detached) {
+      // Era compartido y la sesión se cerró: se reengancha al reconectar.
+      const badge = document.createElement("span");
+      badge.className = "bs-badge bs-badge-detached";
+      badge.textContent = "desconectado";
+      badge.title = "Se sincronizará al volver a conectarte a su servidor";
+      nameBtn.appendChild(badge);
     }
 
     const metaEl = document.createElement("span");
@@ -5141,6 +5333,10 @@ function renderBoardList() {
     if (remote) {
       const server = getServer(b.remote.serverId);
       metaEl.textContent += server ? " · " + server.username + "@" + server.url : " · servidor desconectado";
+    } else if (b.detached) {
+      const server = getServer(b.detached.serverId);
+      const donde = server ? server.username + "@" + server.url : String(b.detached.serverId || "").replace("#", " · ");
+      metaEl.textContent += " · pendiente de reconectar a " + donde;
     }
 
     const info = document.createElement("div");
@@ -5304,6 +5500,8 @@ function cloneBoard(slug) {
       };
     })
   };
+  // Las columnas son la forma del tablero, no del ciclo: el clon las hereda.
+  if (Array.isArray(origen.cols)) estado.cols = clone(origen.cols);
 
   // El clon empieza otra vuelta del mismo trabajo: las tarjetas nacen hoy y
   // sin ciclo anterior. Como todas caen en Backlog, normalizeStamps las deja
@@ -5456,6 +5654,12 @@ function notify() {
   for (const fn of listeners) fn(state);
 }
 
+// Las columnas son del tablero: cada vez que cambia el estado en memoria se
+// vuelcan en COLS, que es lo que recorren el render, las métricas y la ficha.
+function syncCols() {
+  applyBoardCols(state && state.cols);
+}
+
 function pushHistory() {
   if (state) {
     undoStack.push(clone(state));
@@ -5471,6 +5675,7 @@ function undo() {
   if (!canUndo()) return false;
   redoStack.push(clone(state));
   state = undoStack.pop();
+  syncCols();
   saveState();
   notify();
   return true;
@@ -5480,6 +5685,7 @@ function redo() {
   if (!canRedo()) return false;
   undoStack.push(clone(state));
   state = redoStack.pop();
+  syncCols();
   saveState();
   notify();
   return true;
@@ -5524,6 +5730,7 @@ function applyMigrations(s) {
 function resetStore() {
   state = null;
   stateSlug = null;
+  syncCols();
   undoStack.length = 0;
   redoStack.length = 0;
 }
@@ -5555,6 +5762,7 @@ function initStore() {
   if (!state) {
     stateSlug = getActiveSlug();
     state = loadState();
+    syncCols();
   }
   return state;
 }
@@ -5564,6 +5772,7 @@ function initStore() {
 function reloadFromStorage() {
   if (!stateSlug) return false;
   state = loadState();
+  syncCols();
   notify();
   return true;
 }
@@ -5577,6 +5786,7 @@ function setState(newState, shouldSave = true) {
   if (!newState.meta) newState.meta = clone(DEFAULT_META);
   if (!stateSlug) stateSlug = getActiveSlug();
   state = newState;
+  syncCols();
   if (shouldSave) saveState();
   notify();
 }
@@ -5611,6 +5821,17 @@ function saveState() {
   }
 }
 
+// Personalización de columnas: [{ key, name, color }] en el orden del tablero.
+// Se guarda la lista completa: así la sincronización la trata como una sola
+// pieza y el orden viaja junto con los nombres y los colores.
+function setCols(cols) {
+  const current = getState();
+  current.cols = normalizeCols(cols);
+  syncCols();
+  saveState();
+  notify();
+}
+
 function wsById(key) {
   const current = getState();
   for (let i = 0; i < current.ws.length; i++) {
@@ -5627,7 +5848,9 @@ function nextId(ws) {
   // crean una tarjeta a la vez calculan el mismo número desde su propia vista,
   // la fusión las trata como la misma entidad y una de las dos se pierde.
   // Un sufijo aleatorio hace el id único entre clientes sin coordinación.
-  if (isRemote(getBoardEntry(getActiveSlug()))) {
+  // Un tablero desconectado del servidor también: volverá a él al reconectar.
+  const entry = getBoardEntry(stateSlug || getActiveSlug());
+  if (isRemote(entry) || (entry && entry.detached)) {
     const taken = new Set(current.cards.map(function (c) { return c.id; }));
     let id;
     do {
@@ -5688,12 +5911,30 @@ let bloqueoDestructivo = null;
 
 function getDestructiveBlock() { return bloqueoDestructivo; }
 
+// Reconciliación pendiente de decisión del usuario tras volver a conectar:
+// { slug, version, role, base, remote, conflicts }. Mientras exista, ese
+// tablero no sube ni baja nada.
+let pendingConflict = null;
+const conflictListeners = new Set();
+
+function onConflict(fn) {
+  conflictListeners.add(fn);
+  return function () { conflictListeners.delete(fn); };
+}
+
+function getPendingConflict() {
+  if (pendingConflict && pendingConflict.slug === getStateSlug()) return pendingConflict;
+  return null;
+}
+
 // Debe llamarse SIEMPRE antes de cambiar de tablero activo.
 function invalidateSync() {
   // Cancelar el rebote a secas perdería lo que el usuario acaba de escribir,
   // así que primero se envía, y sólo después se invalida.
   flushPendingChanges();
   generation++;
+  // Se recalcula al volver: la marca `reconcile` sigue en el índice.
+  pendingConflict = null;
   if (debounceTimer) {
     clearTimeout(debounceTimer);
     debounceTimer = null;
@@ -5707,6 +5948,9 @@ function flushPendingChanges() {
   const ctx = activeRemoteContext();
   if (!ctx || !isSessionValid(ctx.server)) return;
   if ((ctx.remote.role || "write") === "read") return;
+  // Pendiente de reconciliar: subir a ciegas pisaría lo que el equipo hizo
+  // mientras estábamos desconectados, que es justo lo que el usuario decide.
+  if (ctx.remote.reconcile) return;
 
   const slug = ctx.slug;
   const diff = diffState(getState(), readSnapshot(slug));
@@ -5714,7 +5958,7 @@ function flushPendingChanges() {
 
   pushChanges(ctx.server, ctx.remote.boardId, {
     baseVersion: ctx.remote.baseVersion || 0,
-    cards: diff.cards, ws: diff.ws, meta: diff.meta, deletes: diff.deletes
+    cards: diff.cards, ws: diff.ws, meta: diff.meta, cols: diff.cols, deletes: diff.deletes
   }).then(function (r) {
     // Si el usuario ya volvió a este tablero, la sincronización normal manda.
     if (getStateSlug() === slug) return;
@@ -5774,7 +6018,7 @@ function clearSnapshot(slug) {
 
 // El campo `v` lo administra el servidor; el modelo local no lo necesita.
 function stripVersions(serverState) {
-  return {
+  const out = {
     rev: serverState.rev || 2,
     meta: pickFields(serverState.meta || {}, META_FIELDS),
     ws: (serverState.ws || []).map(function (w) {
@@ -5784,6 +6028,15 @@ function stripVersions(serverState) {
       return Object.assign({ id: c.id }, pickFields(c, CARD_FIELDS));
     })
   };
+  if (Array.isArray(serverState.cols)) out.cols = normalizeCols(serverState.cols);
+  return out;
+}
+
+// Las columnas se comparan como lista entera: el orden también es un cambio.
+// Un tablero que nunca tocó sus columnas no tiene `cols`, y eso equivale a la
+// lista de fábrica.
+function colsKey(cols) {
+  return JSON.stringify(normalizeCols(cols));
 }
 
 function pickFields(source, fields) {
@@ -5838,11 +6091,14 @@ function diffState(current, snapshot) {
   if (!sameFields(current.meta || {}, base.meta || {}, META_FIELDS)) {
     out.meta = pickFields(current.meta || {}, META_FIELDS);
   }
+  if (Array.isArray(current.cols) && colsKey(current.cols) !== colsKey(base.cols)) {
+    out.cols = normalizeCols(current.cols);
+  }
   return out;
 }
 
 function hasChanges(diff) {
-  return Boolean(diff.cards.length || diff.ws.length || diff.deletes.length || diff.meta);
+  return Boolean(diff.cards.length || diff.ws.length || diff.deletes.length || diff.meta || diff.cols);
 }
 
 // Reaplica sobre `state` los cambios que el usuario hizo mientras la petición
@@ -5866,6 +6122,7 @@ function applyDiff(state, diff) {
     else next.ws.push(Object.assign({}, ws));
   }
   if (diff.meta) next.meta = Object.assign({}, next.meta, diff.meta);
+  if (diff.cols) next.cols = clone(diff.cols);
   return next;
 }
 
@@ -5946,6 +6203,7 @@ function scheduleSync() {
     debounceTimer = setTimeout(function () { syncNow(); }, SYNC_DEBOUNCE_MS);
     return;
   }
+  if (getPendingConflict()) return;
   if (currentStatus !== "syncing") setStatus("pending");
   if (debounceTimer) clearTimeout(debounceTimer);
   debounceTimer = setTimeout(function () { syncNow(); }, SYNC_DEBOUNCE_MS);
@@ -5954,8 +6212,9 @@ function scheduleSync() {
 // Llamar al cambiar de tablero para que el indicador refleje el nuevo contexto.
 function refreshSyncStatus() {
   const ctx = activeRemoteContext();
-  if (!ctx) { setStatus("local"); return; }
-  if (!isSessionValid(ctx.server)) { setStatus("auth", "Sesión expirada"); return; }
+  if (!ctx) { setLocalStatus(); return; }
+  if (!isSessionValid(ctx.server)) { expireSession(ctx.server); return; }
+  if (getPendingConflict()) { setStatus("conflict", CONFLICT_DETAIL); return; }
   if ((ctx.remote.role || "write") === "read") {
     setStatus("readonly", "Sólo lectura: no puedes editar este tablero");
     return;
@@ -6019,8 +6278,9 @@ async function syncNow(opciones) {
   if (inFlight) return;
   if (isEditorOpen()) return;
   const ctx = activeRemoteContext();
-  if (!ctx) { setStatus("local"); return; }
-  if (!isSessionValid(ctx.server)) { setStatus("auth", "Sesión expirada"); return; }
+  if (!ctx) { setLocalStatus(); return; }
+  if (!isSessionValid(ctx.server)) { expireSession(ctx.server); return; }
+  if (getPendingConflict()) { setStatus("conflict", CONFLICT_DETAIL); return; }
 
   const slug = ctx.slug;
   const myGeneration = generation;
@@ -6044,6 +6304,17 @@ async function syncNow(opciones) {
   inFlight = true;
   setStatus("syncing");
   try {
+    // Recién reenganchado tras una desconexión: antes de subir nada se
+    // compara con lo que el equipo hizo mientras tanto.
+    if (ctx.remote.reconcile) {
+      const listo = await reconcile(ctx, sigueVigente);
+      if (!listo) return;
+      // Reconciliado sin choques: el estado ya está fusionado y la
+      // instantánea al día; lo que quede por subir sale en el próximo turno.
+      setTimeout(function () { syncNow(); }, 0);
+      return;
+    }
+
     let version, serverState, conflicts = [];
 
     // El `if` mira el rol antes que la diferencia: si un invitado de sólo
@@ -6053,7 +6324,7 @@ async function syncNow(opciones) {
     if (!soloLectura && hasChanges(diff)) {
       const r = await pushChanges(ctx.server, ctx.remote.boardId, {
         baseVersion: baseVersion,
-        cards: diff.cards, ws: diff.ws, meta: diff.meta, deletes: diff.deletes,
+        cards: diff.cards, ws: diff.ws, meta: diff.meta, cols: diff.cols, deletes: diff.deletes,
         confirmDestructive: Boolean(opciones && opciones.confirmDestructive)
       });
       // El servidor ya aplicó el cambio; sólo descartamos la respuesta local.
@@ -6140,8 +6411,9 @@ function handleSyncError(err) {
     return;
   }
   if (err instanceof RemoteError && err.isAuth) {
-    setStatus("auth", "Sesión expirada");
-    showToast("Tu sesión en el servidor expiró. Vuelve a entrar desde ⊞ Tableros.", "warn", 7000);
+    const ctx = activeRemoteContext();
+    if (ctx) expireSession(ctx.server);
+    else setStatus("auth", "Sesión expirada");
     return;
   }
   if (err instanceof RemoteError && err.status === 404) {
@@ -6165,6 +6437,297 @@ function handleSyncError(err) {
   }
   console.error("Error de sincronización:", err);
   setStatus("error", (err && err.message) || "Error desconocido");
+}
+
+// -- Desconexión automática y reenganche ------------------------------------
+//
+// Cuando la sesión caduca, los tableros de ese servidor pasan a ser locales
+// sin que nadie tenga que pulsar «Desconectar»: se puede seguir trabajando.
+// Pero no se olvida de dónde venían: la entrada guarda `detached` (el enlace
+// remoto) y la instantánea de la última sincronización se conserva. Al volver
+// a entrar en el mismo servidor con el mismo usuario se reenganchan solos y se
+// reconcilian contra lo que el equipo hizo mientras tanto.
+
+const DETACHED_DETAIL = "Desconectado del servidor. Vuelve a conectarte desde ⊞ Tableros y los cambios se sincronizarán solos.";
+const CONFLICT_DETAIL = "Hay cambios tuyos y del equipo sobre lo mismo. Pulsa para decidir qué versión se queda.";
+
+function setLocalStatus() {
+  const entry = getBoardEntry(getStateSlug());
+  if (entry && entry.kind !== "remote" && entry.detached) setStatus("detached", DETACHED_DETAIL);
+  else setStatus("local");
+}
+
+function detachedServerOf(slug) {
+  const entry = getBoardEntry(slug);
+  return entry && entry.kind !== "remote" && entry.detached ? entry.detached.serverId : null;
+}
+
+// Pasa a locales los tableros de un servidor recordando su enlace.
+function detachServerBoards(serverId) {
+  const now = new Date().toISOString();
+  let n = 0;
+  for (const entry of listAllBoards()) {
+    if (entry.kind === "remote" && entry.remote && entry.remote.serverId === serverId) {
+      patchBoardEntry(entry.slug, {
+        kind: "local", remote: null,
+        detached: Object.assign({}, entry.remote, { detachedAt: now })
+      });
+      n++;
+    }
+  }
+  return n;
+}
+
+// Reengancha los tableros desconectados de un servidor. Devuelve sus slugs.
+function reattachServerBoards(serverId) {
+  const slugs = [];
+  for (const entry of listAllBoards()) {
+    const d = entry.detached;
+    if (entry.kind === "remote" || !d || d.serverId !== serverId) continue;
+    const remote = Object.assign({}, d, { reconcile: true });
+    delete remote.detachedAt;
+    patchBoardEntry(entry.slug, { kind: "remote", remote: remote, detached: null });
+    slugs.push(entry.slug);
+  }
+  return slugs;
+}
+
+// Tras reenganchar: si el tablero en pantalla es uno de ellos, la interfaz se
+// pone al día (bitácora, sólo lectura, indicador) y arranca la reconciliación.
+function resumeAfterReattach(slugs) {
+  if (!slugs || slugs.indexOf(getStateSlug()) < 0) return;
+  if (typeof onAppliedCallback === "function") onAppliedCallback();
+  refreshSyncStatus();
+  syncNow();
+}
+
+// Tras desconectar a mano: el tablero en pantalla pudo dejar de ser remoto.
+function notifyBoardsChanged() {
+  if (typeof onAppliedCallback === "function") onAppliedCallback();
+  refreshSyncStatus();
+}
+
+// Desconexión automática por sesión caducada. Idempotente: varias pestañas o
+// varios sondeos pueden llegar aquí a la vez.
+function expireSession(server) {
+  const yaCaducada = !server.token;
+  markSessionExpired(server.id);
+  const n = detachServerBoards(server.id);
+  if (n || !yaCaducada) {
+    showToast("Tu sesión en " + server.url + " expiró. " +
+      (n ? (n === 1 ? "El tablero compartido sigue" : "Los " + n + " tableros compartidos siguen") +
+           " aquí como local" + (n === 1 ? "" : "es") + "; al volver a conectarte se sincronizará" +
+           (n === 1 ? "" : "n") + " solo" + (n === 1 ? "" : "s") + "."
+         : "Vuelve a conectarte desde ⊞ Tableros."), "warn", 9000);
+  }
+  if (typeof onAppliedCallback === "function") onAppliedCallback();
+  setLocalStatus();
+}
+
+// Al arrancar: sesiones caducadas por reloj. No toca la red.
+function expireStaleSessions() {
+  for (const server of listServers()) {
+    if (server.token && !isSessionValid(server)) expireSession(server);
+  }
+}
+
+// -- Reconciliación a tres vías ---------------------------------------------
+//
+// base = instantánea de la última sincronización (lo que ambos lados tenían),
+// local = lo que hay en este navegador, remote = lo que hay ahora en el
+// servidor. Lo que sólo cambió de un lado se combina solo, campo a campo. Lo
+// que cambió de los dos lados de forma distinta es un conflicto y lo decide
+// el usuario: «mine» se queda con lo de este navegador, «theirs» con lo del
+// servidor. Los comentarios nunca chocan: se unen.
+
+const CARD_MERGE_FIELDS = CARD_FIELDS.filter(function (f) { return f !== "comments"; });
+
+function unionComments(a, b) {
+  const byId = new Map();
+  (Array.isArray(a) ? a : []).forEach(function (c) { if (c && c.id) byId.set(c.id, c); });
+  (Array.isArray(b) ? b : []).forEach(function (c) { if (c && c.id && !byId.has(c.id)) byId.set(c.id, c); });
+  return [...byId.values()].sort(function (x, y) { return String(x.at || "").localeCompare(String(y.at || "")); });
+}
+
+function changedFields(a, b, fields) {
+  return fields.filter(function (f) { return normValue(a[f]) !== normValue(b[f]); });
+}
+
+function mergeEntities(kind, idKey, fields, baseList, localList, out, choices, conflicts) {
+  const baseMap = new Map((baseList || []).map(function (x) { return [x[idKey], x]; }));
+  const localMap = new Map((localList || []).map(function (x) { return [x[idKey], x]; }));
+  const ids = new Set([...baseMap.keys(), ...localMap.keys()]);
+  const titleOf = function (x) { return x ? (kind === "card" ? x.t : x.label) : ""; };
+
+  for (const id of ids) {
+    const b = baseMap.get(id), l = localMap.get(id);
+    const ri = out.findIndex(function (x) { return x[idKey] === id; });
+    const r = ri >= 0 ? out[ri] : null;
+    const key = kind + ":" + id;
+    const mine = (choices[key] || "mine") === "mine";
+    const conflict = function (clash) {
+      conflicts.push({ key: key, kind: kind, id: id, title: titleOf(l) || titleOf(r) || titleOf(b),
+                       fields: clash, mine: l ? clone(l) : null, theirs: r ? clone(r) : null });
+    };
+
+    if (!b) {
+      // Nuevo en este navegador (o creado a la vez en los dos lados).
+      if (!l) continue;
+      if (!r) { out.push(clone(l)); continue; }
+      const clash = changedFields(l, r, fields);
+      if (clash.length) {
+        conflict(clash);
+        if (mine) out[ri] = Object.assign({}, r, clone(l));
+      }
+      if (kind === "card") out[ri].comments = unionComments(r.comments, l.comments);
+      continue;
+    }
+
+    if (!l) {
+      // Borrado aquí.
+      if (!r) continue;
+      if (!changedFields(r, b, fields).length) { out.splice(ri, 1); continue; }
+      conflict(changedFields(r, b, fields));
+      if (mine) out.splice(ri, 1);
+      continue;
+    }
+
+    const localChanged = changedFields(l, b, fields);
+    if (!r) {
+      // Borrado en el servidor. Si aquí no se tocó, se acepta el borrado.
+      if (!localChanged.length) continue;
+      conflict(localChanged);
+      if (mine) out.push(clone(l));
+      continue;
+    }
+    const remoteChanged = changedFields(r, b, fields);
+    const clash = localChanged.filter(function (f) {
+      return remoteChanged.indexOf(f) >= 0 && normValue(l[f]) !== normValue(r[f]);
+    });
+    if (clash.length) conflict(clash);
+    const next = Object.assign({}, r);
+    localChanged.forEach(function (f) {
+      if (clash.indexOf(f) < 0 || mine) next[f] = clone(l[f]);
+    });
+    if (kind === "card") next.comments = unionComments(r.comments, l.comments);
+    out[ri] = next;
+  }
+}
+
+/**
+ * Fusiona base/local/remote. Con `choices` vacío sirve para detectar: lo que
+ * choca se apunta en `conflicts` (y provisionalmente se resuelve a favor de
+ * lo local). Con las decisiones del usuario produce el estado definitivo.
+ */
+function threeWayMerge(base, local, remote, choices) {
+  choices = choices || {};
+  base = base || { meta: {}, ws: [], cards: [] };
+  const conflicts = [];
+  const out = clone(remote);
+  out.cards = out.cards || [];
+  out.ws = out.ws || [];
+
+  mergeEntities("ws", "key", WS_FIELDS, base.ws, local.ws, out.ws, choices, conflicts);
+  mergeEntities("card", "id", CARD_MERGE_FIELDS, base.cards, local.cards, out.cards, choices, conflicts);
+
+  // Encabezado: una sola entidad, campo a campo.
+  const bm = base.meta || {}, lm = local.meta || {}, rm = remote.meta || {};
+  const metaLocal = changedFields(lm, bm, META_FIELDS);
+  if (metaLocal.length) {
+    const metaRemote = changedFields(rm, bm, META_FIELDS);
+    const clash = metaLocal.filter(function (f) {
+      return metaRemote.indexOf(f) >= 0 && normValue(lm[f]) !== normValue(rm[f]);
+    });
+    const mine = (choices["meta:meta"] || "mine") === "mine";
+    if (clash.length) {
+      conflicts.push({ key: "meta:meta", kind: "meta", id: "meta", title: lm.title || rm.title || "",
+                       fields: clash, mine: clone(lm), theirs: clone(rm) });
+    }
+    out.meta = Object.assign({}, rm);
+    metaLocal.forEach(function (f) {
+      if (clash.indexOf(f) < 0 || mine) out.meta[f] = lm[f];
+    });
+  }
+
+  // Columnas: la lista entera es una pieza (el orden es del conjunto).
+  const colsLocal = colsKey(local.cols) !== colsKey(base.cols);
+  if (colsLocal) {
+    const colsRemote = colsKey(remote.cols) !== colsKey(base.cols);
+    const clash = colsRemote && colsKey(local.cols) !== colsKey(remote.cols);
+    const mine = (choices["cols:cols"] || "mine") === "mine";
+    if (clash) {
+      conflicts.push({ key: "cols:cols", kind: "cols", id: "cols", title: "Columnas",
+                       fields: ["cols"], mine: normalizeCols(local.cols), theirs: normalizeCols(remote.cols) });
+    }
+    if (!clash || mine) out.cols = normalizeCols(local.cols);
+  }
+
+  return { state: out, conflicts: conflicts };
+}
+
+// Primer contacto tras reenganchar. Devuelve true si quedó reconciliado sin
+// intervención; false si hay que esperar al usuario (o se abandonó).
+async function reconcile(ctx, sigueVigente) {
+  const slug = ctx.slug;
+  const fresh = await fetchBoard(ctx.server, ctx.remote.boardId);
+  if (!sigueVigente()) return false;
+
+  const remote = stripVersions(fresh.state);
+  const base = readSnapshot(slug) || { meta: {}, ws: [], cards: [] };
+  const role = fresh.role || ctx.remote.role || "write";
+
+  // Sin permiso de escritura no hay nada que decidir: manda el servidor.
+  if (role === "read") {
+    finishReconcile(slug, fresh.version, role, remote, remote);
+    if (hasChanges(diffState(getState(), remote))) {
+      showToast("Tablero de sólo lectura: se descartaron los cambios hechos sin conexión", "warn", 7000);
+    }
+    return true;
+  }
+
+  const r = threeWayMerge(base, getState(), remote);
+  if (!r.conflicts.length) {
+    finishReconcile(slug, fresh.version, role, remote, r.state);
+    return true;
+  }
+
+  pendingConflict = { slug: slug, version: fresh.version, role: role, base: base, remote: remote,
+                      conflicts: r.conflicts };
+  setStatus("conflict", CONFLICT_DETAIL);
+  showToast(r.conflicts.length === 1
+    ? "Al reconectar, un elemento cambió aquí y en el servidor: decide cuál se queda"
+    : "Al reconectar, " + r.conflicts.length + " elementos cambiaron aquí y en el servidor: decide cuáles se quedan",
+    "warn", 8000);
+  for (const fn of conflictListeners) fn(pendingConflict);
+  return false;
+}
+
+function finishReconcile(slug, version, role, remote, merged) {
+  const entry = getBoardEntry(slug);
+  if (!entry || !entry.remote || getStateSlug() !== slug) return;
+  writeSnapshot(slug, remote);
+  const nextRemote = Object.assign({}, entry.remote, {
+    baseVersion: version, role: role, lastSync: new Date().toISOString()
+  });
+  delete nextRemote.reconcile;
+  patchBoardEntry(slug, { remote: nextRemote });
+  pendingConflict = null;
+  applying = true;
+  try { setState(merged, true); } finally { applying = false; }
+  if (typeof onAppliedCallback === "function") onAppliedCallback();
+  setStatus(role === "read" ? "readonly" : (hasChanges(diffState(getState(), remote)) ? "pending" : "synced"));
+}
+
+// Decisión del usuario: { "card:ID": "mine" | "theirs", ... }. Se recalcula
+// sobre el estado local de ahora, por si se siguió editando con el aviso
+// abierto; lo que no tenga decisión se queda con lo local.
+function resolveConflicts(choices) {
+  const p = getPendingConflict();
+  if (!p) return false;
+  const r = threeWayMerge(p.base, getState(), p.remote, choices || {});
+  finishReconcile(p.slug, p.version, p.role, p.remote, r.state);
+  syncNow();
+  return true;
 }
 
   // -- Módulo: js/theme.js --
@@ -6441,10 +7004,16 @@ function updateStats() {
   const m = flowMetrics(state.cards);
   const anejas = m.aging.late;
 
+  // Nombre y color de cada columna salen del tablero: se pueden renombrar.
+  const colInfo = {};
+  COLS.forEach(function (c) { colInfo[c.key] = c; });
+  const colName = function (k) { return esc(colInfo[k] ? colInfo[k].name : k); };
+  const colColor = function (k) { return colInfo[k] ? colInfo[k].kc : "var(--muted)"; };
+
   const tiles = [
     { l: "Total visibles", n: total, sc: "var(--accent)" },
     { l: "Pendientes",     n: pend,  sc: "var(--muted)" },
-    { l: "Por hacer",      n: byCol.todo, sc: "var(--pr-media)" },
+    { l: colName("todo"), n: byCol.todo, sc: colColor("todo") },
     {
       l: "WIP", n: m.wip, sc: "var(--accent)",
       small: m.wipLimit ? "/ " + m.wipLimit : "",
@@ -6454,7 +7023,7 @@ function updateStats() {
       alert: m.over.length > 0,
       title: m.over.length
         ? "Por encima del límite: " + m.over.join(", ")
-        : "Trabajo en curso (En progreso + Bloqueado) sobre la suma de límites"
+        : "Trabajo en curso (" + colInfo.inprogress.name + " + " + colInfo.blocked.name + ") sobre la suma de límites"
     },
     {
       l: "Throughput", n: m.throughput7, sc: "var(--ws-rad)", small: "/ 7 d",
@@ -6473,8 +7042,8 @@ function updateStats() {
         ? "Tarjetas en curso por encima de " + num(m.aging.umbral.late, 1) + " días en su columna"
         : "Más añeja: " + m.aging.maxId + " con " + num(m.aging.max, 1) + " días · umbral " + num(m.aging.umbral.late, 1) + " d"
     },
-    { l: "Bloqueado",      n: byCol.blocked, sc: "var(--ws-sec)" },
-    { l: "Hecho",          n: byCol.done, sc: "var(--ws-rad)", grand: grand }
+    { l: colName("blocked"), n: byCol.blocked, sc: colColor("blocked") },
+    { l: colName("done"), n: byCol.done, sc: colColor("done"), grand: grand }
   ];
 
   const el = document.getElementById("stats");
@@ -8072,6 +8641,162 @@ function makeKey(name) {
   return key;
 }
 
+  // -- Módulo: js/columns.js --
+// Modal de columnas del tablero: nombre, posición y color.
+//
+// Las claves y la etapa de flujo de cada columna son fijas (de ellas dependen
+// las tarjetas y las métricas); lo que cada tablero decide es cómo se llaman,
+// en qué orden aparecen de izquierda a derecha y de qué color se pintan. Se
+// guarda la lista entera en `state.cols`, que viaja al servidor como una sola
+// pieza (ver sync.js y server/merge.js).
+
+
+
+
+
+
+let onChangedCallback = null;
+
+function initColumnsModal(onChanged) {
+  onChangedCallback = onChanged;
+
+  const overlay = document.getElementById("colsOverlay");
+  const openBtn = document.getElementById("colsBtn");
+  const closeBtn = document.getElementById("colsClose");
+  const resetBtn = document.getElementById("colsReset");
+
+  if (openBtn) openBtn.addEventListener("click", openColumns);
+  if (closeBtn) closeBtn.addEventListener("click", closeColumns);
+  if (resetBtn) {
+    resetBtn.addEventListener("click", function () {
+      pushHistory();
+      commit(DEFAULT_COLS.map(function (c) { return { key: c.key, name: c.name, color: "" }; }));
+      renderColumnsList();
+    });
+  }
+  if (overlay) {
+    overlay.addEventListener("mousedown", function (ev) {
+      if (ev.target === overlay) closeColumns();
+    });
+  }
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key === "Escape" && overlay && overlay.classList.contains("open")) closeColumns();
+  });
+}
+
+function openColumns() {
+  if (denyReadOnly("No se pueden cambiar las columnas")) return;
+  const overlay = document.getElementById("colsOverlay");
+  if (!overlay) return;
+  renderColumnsList();
+  overlay.classList.add("open");
+}
+
+function closeColumns() {
+  const overlay = document.getElementById("colsOverlay");
+  if (overlay) overlay.classList.remove("open");
+}
+
+// Lista actual en el formato que se guarda.
+function currentCols() {
+  return COLS.map(function (c) { return { key: c.key, name: c.name, color: c.color || "" }; });
+}
+
+function commit(cols) {
+  setCols(cols);
+  if (typeof onChangedCallback === "function") onChangedCallback();
+}
+
+// El selector de color sólo admite #rrggbb, y los colores de fábrica son
+// variables CSS que cambian con el tema: se resuelven al color pintado.
+function resolveHex(cssColor) {
+  const probe = document.createElement("span");
+  probe.style.color = cssColor;
+  probe.style.display = "none";
+  document.body.appendChild(probe);
+  const rgb = getComputedStyle(probe).color;
+  probe.remove();
+  const m = rgb.match(/\d+/g);
+  if (!m || m.length < 3) return "#8494a8";
+  return "#" + m.slice(0, 3).map(function (n) {
+    return Number(n).toString(16).padStart(2, "0");
+  }).join("");
+}
+
+function renderColumnsList() {
+  const list = document.getElementById("colsList");
+  if (!list) return;
+  const state = getState();
+  list.innerHTML = "";
+
+  COLS.forEach(function (col, i) {
+    const used = state.cards.filter(function (c) { return c.col === col.key; }).length;
+    const def = DEFAULT_COLS.find(function (d) { return d.key === col.key; });
+    const row = document.createElement("div");
+    row.className = "ws-row col-row";
+    row.dataset.col = col.key;
+    row.style.setProperty("--wc", col.kc);
+    row.innerHTML =
+      '<span class="col-pos">' + (i + 1) + '</span>' +
+      '<span class="sw"><input type="color" value="' + resolveHex(col.kc) + '" aria-label="Color de ' + esc(col.name) + '"></span>' +
+      '<span class="nm"><input type="text" value="' + esc(col.name) + '" maxlength="' + MAX_COL_NAME + '" aria-label="Nombre de la columna" placeholder="' + esc(def ? def.name : col.key) + '"></span>' +
+      '<span class="cnt">' + used + ' tarea' + (used === 1 ? "" : "s") + '</span>' +
+      '<button class="del col-reset-color" title="Volver al color de fábrica" aria-label="Volver al color de fábrica"' + (col.color ? "" : " disabled") + '>↺</button>' +
+      '<button class="del col-move" data-dir="-1" title="Mover a la izquierda" aria-label="Mover a la izquierda"' + (i === 0 ? " disabled" : "") + '>◀</button>' +
+      '<button class="del col-move" data-dir="1" title="Mover a la derecha" aria-label="Mover a la derecha"' + (i === COLS.length - 1 ? " disabled" : "") + '>▶</button>';
+
+    const colorInput = row.querySelector('input[type="color"]');
+    // Un historial por gesto, no por cada paso del arrastre en el selector.
+    colorInput.addEventListener("focus", function () { pushHistory(); });
+    colorInput.addEventListener("input", function (ev) {
+      const cols = currentCols();
+      cols[i].color = ev.target.value;
+      row.style.setProperty("--wc", ev.target.value);
+      commit(cols);
+      row.querySelector(".col-reset-color").disabled = false;
+    });
+
+    const nameInput = row.querySelector('input[type="text"]');
+    nameInput.addEventListener("focus", function () { pushHistory(); });
+    nameInput.addEventListener("input", function (ev) {
+      // Vacío no se guarda: una columna sin nombre no se puede leer. Al salir
+      // del campo se repone el que tenga.
+      if (!ev.target.value.trim()) return;
+      const cols = currentCols();
+      cols[i].name = ev.target.value;
+      commit(cols);
+    });
+    nameInput.addEventListener("blur", function () {
+      if (!nameInput.value.trim()) nameInput.value = COLS[i].name;
+    });
+
+    row.querySelector(".col-reset-color").addEventListener("click", function () {
+      pushHistory();
+      const cols = currentCols();
+      cols[i].color = "";
+      commit(cols);
+      renderColumnsList();
+    });
+
+    row.querySelectorAll(".col-move").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        const j = i + Number(btn.dataset.dir);
+        if (j < 0 || j >= COLS.length) return;
+        pushHistory();
+        const cols = currentCols();
+        const moved = cols.splice(i, 1)[0];
+        cols.splice(j, 0, moved);
+        commit(cols);
+        renderColumnsList();
+        const again = list.querySelector('.col-row[data-col="' + moved.key + '"] .col-move[data-dir="' + btn.dataset.dir + '"]');
+        if (again && !again.disabled) again.focus();
+      });
+    });
+
+    list.appendChild(row);
+  });
+}
+
   // -- Módulo: js/io.js --
 let onIoStateChangedCallback = null;
 
@@ -8120,7 +8845,8 @@ function exportPayload() {
     exported: new Date().toISOString(),
     meta: state.meta || clone(DEFAULT_META),
     ws: state.ws,
-    cards: state.cards
+    cards: state.cards,
+    cols: state.cols
   };
 }
 
@@ -8332,12 +9058,14 @@ function handleImport() {
   // revisión al día pero venga sin sellos (editado a mano, o exportado de un
   // tablero de otra persona) no dispararía ningún parche y entraría sin
   // fechas.
-  setState(normalizeStamps(applyMigrations({
+  const imported = {
     meta: data.meta || clone(DEFAULT_META),
     cards: cards,
     ws: ws,
     rev: data.rev || SEED_REV
-  })), true);
+  };
+  if (Array.isArray(data.cols)) imported.cols = normalizeCols(data.cols);
+  setState(normalizeStamps(applyMigrations(imported)), true);
 
   resetFilters();
   if (typeof onIoStateChangedCallback === "function") {
@@ -8501,6 +9229,110 @@ const TEMPLATES = {
     ]
   },
 
+  // Las plantillas de operación traen sus propias columnas: el flujo de un
+  // ticket o de una orden de trabajo no se llama «Backlog» ni «En progreso».
+  // Las claves siguen siendo las de siempre, así que las métricas funcionan.
+  soporte: {
+    name: "Soporte Técnico",
+    desc: "Mesa de ayuda: tickets desde la recepción hasta la resolución, con espera de cliente y escalamiento.",
+    meta: {
+      eyebrow: "Mesa de Ayuda",
+      title: "Soporte Técnico",
+      titleThin: "· Tickets",
+      subtitle: "Recepción, diagnóstico, atención y cierre de incidencias",
+      branch: "v1.0"
+    },
+    cols: [
+      { key: "backlog",    name: "Recibidos" },
+      { key: "todo",       name: "Clasificados" },
+      { key: "inprogress", name: "En atención" },
+      { key: "blocked",    name: "Esperando cliente / 3.º" },
+      { key: "done",       name: "Resueltos" }
+    ],
+    ws: [
+      { key: "N1",  label: "Nivel 1 · Mesa",       color: "#0a8fa6" },
+      { key: "N2",  label: "Nivel 2 · Escalado",   color: "#6172f3" },
+      { key: "RED", label: "Redes y conectividad", color: "#e0721c" },
+      { key: "HW",  label: "Hardware",             color: "#8a5a2b" },
+      { key: "ACC", label: "Accesos y cuentas",    color: "#3aa03a" }
+    ],
+    cards: [
+      { id: "N1-1",  ws: "N1",  pri: "media",   col: "backlog",    t: "Usuario no puede imprimir", d: "**Solicitante:** \n**Equipo / ubicación:** \n**Desde cuándo:** \n\n- [ ] Verificar cola de impresión\n- [ ] Reinstalar controlador", labels: ["impresion"] },
+      { id: "ACC-1", ws: "ACC", pri: "alta",    col: "backlog",    t: "Restablecer contraseña de correo", d: "Validar identidad antes de restablecer.\n\n- [ ] Validar identidad\n- [ ] Forzar cambio en el próximo inicio", labels: ["cuentas"] },
+      { id: "RED-1", ws: "RED", pri: "critica", col: "todo",       t: "Sin conexión en sala de reuniones", d: "Afecta a varios usuarios. Revisar punto de acceso y switch del piso.", labels: ["wifi"] },
+      { id: "HW-1",  ws: "HW",  pri: "media",   col: "todo",       t: "Notebook con batería que no carga", d: "- [ ] Probar con otro cargador\n- [ ] Revisar garantía\n- [ ] Coordinar equipo de reemplazo", labels: ["garantia"] },
+      { id: "N2-1",  ws: "N2",  pri: "alta",    col: "inprogress", t: "Error al abrir sistema contable", d: "Escalado desde Nivel 1. Reproducido en dos equipos.\n\n- [x] Recopilar captura del error\n- [ ] Revisar registro del servidor\n- [ ] Probar en ambiente de pruebas" },
+      { id: "N1-2",  ws: "N1",  pri: "baja",    col: "blocked",    t: "Instalar software de diseño", d: "Esperando aprobación de licencia por parte de la jefatura.", labels: ["licencias"] },
+      { id: "N1-3",  ws: "N1",  pri: "media",   col: "done",       t: "Configurar correo en celular nuevo", d: "Resuelto en remoto. Usuario confirma funcionamiento." }
+    ]
+  },
+
+  comercial: {
+    name: "Comerciales",
+    desc: "Embudo de ventas: oportunidades desde el primer contacto hasta el cierre, por segmento de cliente.",
+    meta: {
+      eyebrow: "Gestión Comercial",
+      title: "Embudo de Ventas",
+      titleThin: "· Oportunidades",
+      subtitle: "Prospección, propuesta, negociación y cierre",
+      branch: "v1.0"
+    },
+    cols: [
+      { key: "backlog",    name: "Prospectos" },
+      { key: "todo",       name: "Contactados" },
+      { key: "inprogress", name: "Propuesta enviada" },
+      { key: "blocked",    name: "En negociación" },
+      { key: "done",       name: "Cerrados" }
+    ],
+    ws: [
+      { key: "EMP", label: "Empresas",          color: "#3c74e0" },
+      { key: "PYM", label: "Pymes",             color: "#12a594" },
+      { key: "PUB", label: "Sector público",    color: "#9a72f0" },
+      { key: "REN", label: "Renovaciones",      color: "#e0b21c" }
+    ],
+    cards: [
+      { id: "EMP-1", ws: "EMP", pri: "alta",    col: "backlog",    t: "Distribuidora del Norte", d: "**Contacto:** \n**Necesidad:** \n**Monto estimado:** \n\nReferido por cliente actual.", labels: ["referido"] },
+      { id: "PYM-1", ws: "PYM", pri: "media",   col: "backlog",    t: "Ferretería La Esquina", d: "Llegó por formulario web. Interesado en plan básico.", labels: ["web"] },
+      { id: "PUB-1", ws: "PUB", pri: "alta",    col: "todo",       t: "Municipalidad · licitación de servicios", d: "- [ ] Descargar bases\n- [ ] Revisar requisitos administrativos\n- [ ] Consultas al foro antes del plazo", labels: ["licitacion"] },
+      { id: "EMP-2", ws: "EMP", pri: "critica", col: "inprogress", t: "Constructora Andes · propuesta anual", d: "Propuesta enviada. Hacer seguimiento a los 5 días.\n\n- [x] Enviar propuesta\n- [ ] Llamada de seguimiento", labels: ["seguimiento"] },
+      { id: "REN-1", ws: "REN", pri: "alta",    col: "blocked",    t: "Renovación contrato Clínica Sur", d: "Piden 10 % de descuento. Evaluar con gerencia antes de responder.", labels: ["descuento"] },
+      { id: "PYM-2", ws: "PYM", pri: "media",   col: "done",       t: "Panadería Central · ganado", d: "Contrato firmado. Traspasar a implementación.", labels: ["ganado"] }
+    ]
+  },
+
+  mantenimiento: {
+    name: "Mantenimiento de Equipos",
+    desc: "Órdenes de trabajo preventivas y correctivas, con espera de repuestos y cierre verificado.",
+    meta: {
+      eyebrow: "Mantenimiento",
+      title: "Órdenes de Trabajo",
+      titleThin: "· Equipos",
+      subtitle: "Preventivo, correctivo y repuestos",
+      branch: "v1.0"
+    },
+    cols: [
+      { key: "backlog",    name: "Solicitudes" },
+      { key: "todo",       name: "Programadas" },
+      { key: "inprogress", name: "En ejecución" },
+      { key: "blocked",    name: "Esperando repuesto" },
+      { key: "done",       name: "Cerradas" }
+    ],
+    ws: [
+      { key: "PRE", label: "Preventivo",   color: "#3aa03a" },
+      { key: "COR", label: "Correctivo",   color: "#e5484d" },
+      { key: "CAL", label: "Calibración",  color: "#0a8fa6" },
+      { key: "INS", label: "Instalaciones", color: "#6b7a90" }
+    ],
+    cards: [
+      { id: "COR-1", ws: "COR", pri: "critica", col: "backlog",    t: "Compresor N.º 2 con ruido anormal", d: "**Equipo:** \n**Ubicación:** \n**Reportado por:** \n\nDetener si aumenta la temperatura.", labels: ["compresor"] },
+      { id: "PRE-1", ws: "PRE", pri: "media",   col: "todo",       t: "Mantención trimestral grupo electrógeno", d: "- [ ] Cambio de aceite y filtros\n- [ ] Revisar baterías\n- [ ] Prueba con carga 30 min", labels: ["trimestral"] },
+      { id: "CAL-1", ws: "CAL", pri: "alta",    col: "todo",       t: "Calibrar balanzas de bodega", d: "Certificado vence a fin de mes.", labels: ["certificacion"] },
+      { id: "PRE-2", ws: "PRE", pri: "media",   col: "inprogress", t: "Limpieza de filtros de aire acondicionado", d: "- [x] Piso 1\n- [ ] Piso 2\n- [ ] Piso 3", labels: ["climatizacion"] },
+      { id: "COR-2", ws: "COR", pri: "alta",    col: "blocked",    t: "Cinta transportadora detenida", d: "Rodamiento dañado. Repuesto pedido al proveedor; llega en 3 días.", labels: ["repuesto"] },
+      { id: "INS-1", ws: "INS", pri: "baja",    col: "done",       t: "Cambio de luminarias en pasillo", d: "Cerrada y verificada por jefatura de área." }
+    ]
+  },
+
   blank: {
     name: "Tablero en Blanco",
     desc: "Un lienzo limpio sin tareas para empezar desde cero.",
@@ -8586,10 +9418,13 @@ function applyTemplate(key) {
   // La plantilla nace con la revisión al día, así que el parche de migración
   // no correría: los sellos de flujo hay que ponerlos aquí o el tablero nuevo
   // arrancaría sin fecha de creación en ninguna tarjeta.
+  // Las columnas también: una plantilla sin columnas propias vuelve a las de
+  // fábrica, para no heredar los nombres de la plantilla anterior.
   setState(normalizeStamps({
     meta: clone(t.meta),
     ws: clone(t.ws),
     cards: clone(t.cards),
+    cols: normalizeCols(t.cols),
     rev: SEED_REV
   }), true);
 
@@ -8812,14 +9647,24 @@ async function handleConnect() {
     const server = await login(url, username, password);
     passInput.value = "";
     setConnectMsg("", false);
-    showToast("Conectado a " + server.url + " como " + server.username, "success");
-    await renderServers();
-    if (typeof _onIndexChanged === "function") _onIndexChanged();
+    await afterLogin(server);
   } catch (err) {
     setConnectMsg(describeError(err), true);
   } finally {
     button.disabled = false;
   }
+}
+
+// Al entrar en un servidor se reenganchan los tableros que se desconectaron de
+// él (por sesión caducada o a mano). Su sincronización empieza reconciliando.
+async function afterLogin(server) {
+  const slugs = reattachServerBoards(server.id);
+  showToast("Conectado a " + server.url + " como " + server.username +
+    (slugs.length ? " · " + slugs.length + (slugs.length === 1 ? " tablero reconectado" : " tableros reconectados") : ""),
+    "success", 5000);
+  await renderServers();
+  if (typeof _onIndexChanged === "function") _onIndexChanged();
+  resumeAfterReattach(slugs);
 }
 
 function describeError(err) {
@@ -8878,7 +9723,11 @@ function buildServerBlock(server) {
 
   const outBtn = document.createElement("button");
   outBtn.className = "srv-btn";
-  outBtn.textContent = "Desconectar";
+  outBtn.textContent = isSessionValid(server) ? "Desconectar" : "Olvidar";
+  if (!isSessionValid(server)) {
+    outBtn.title = "Quitar este servidor de la lista. Sus tableros siguen como locales.";
+    newBtn.hidden = true;
+  }
   outBtn.addEventListener("click", function () { handleDisconnect(server); });
 
   actions.appendChild(newBtn);
@@ -8900,7 +9749,8 @@ async function loadServerBoards(server) {
   const list = block.querySelector(".srv-boards");
 
   if (!isSessionValid(server)) {
-    list.innerHTML = '<p class="bs-empty err">Sesión expirada. Vuelve a conectarte.</p>';
+    if (server.token) expireSession(server);
+    showReconnect(server, list);
     return;
   }
 
@@ -8908,6 +9758,11 @@ async function loadServerBoards(server) {
   try {
     boards = await fetchBoards(server);
   } catch (err) {
+    if (err instanceof RemoteError && err.isAuth) {
+      expireSession(server);
+      showReconnect(server, list);
+      return;
+    }
     const offline = err instanceof RemoteError && err.isOffline;
     list.innerHTML = '<p class="bs-empty' + (offline ? "" : " err") + '">' +
       esc(offline ? "Sin conexión. Los tableros ya abiertos siguen disponibles sin red."
@@ -8928,6 +9783,37 @@ async function loadServerBoards(server) {
   for (const board of boards) {
     list.appendChild(buildRemoteBoardRow(server, board));
   }
+}
+
+// Sesión caducada: la dirección y el usuario ya se saben, sólo falta la
+// contraseña. Al entrar se reenganchan los tableros que se desconectaron.
+function showReconnect(server, list) {
+  list.innerHTML =
+    '<p class="bs-empty err">Sesión expirada. Tus tableros de este servidor siguen aquí como locales ' +
+    'y se sincronizarán al volver a entrar.</p>' +
+    '<div class="srv-new srv-reconnect">' +
+    '<input type="password" class="ff-in" placeholder="Contraseña de ' + esc(server.username) + '" autocomplete="current-password">' +
+    '<button class="btn primary">Reconectar</button></div>' +
+    '<p class="importmsg srv-reconnect-msg"></p>';
+  const input = list.querySelector("input");
+  const btn = list.querySelector(".srv-reconnect button");
+  const msg = list.querySelector(".srv-reconnect-msg");
+  const submit = async function () {
+    if (!input.value) { input.focus(); return; }
+    btn.disabled = true;
+    msg.textContent = "Conectando…";
+    msg.classList.remove("err");
+    try {
+      const fresh = await login(server.url, server.username, input.value);
+      await afterLogin(fresh);
+    } catch (err) {
+      msg.textContent = describeError(err);
+      msg.classList.add("err");
+      btn.disabled = false;
+    }
+  };
+  btn.addEventListener("click", submit);
+  input.addEventListener("keydown", function (ev) { if (ev.key === "Enter") submit(); });
 }
 
 // Papelera del servidor: sólo trae algo para el dueño de un tablero eliminado.
@@ -9165,7 +10051,8 @@ function stripForLocal(serverState) {
     rev: serverState.rev || 2,
     meta: serverState.meta ? omit(serverState.meta, "v") : {},
     ws: (serverState.ws || []).map(function (w) { return omit(w, "v"); }),
-    cards: (serverState.cards || []).map(function (c) { return omit(c, "v"); })
+    cards: (serverState.cards || []).map(function (c) { return omit(c, "v"); }),
+    cols: Array.isArray(serverState.cols) ? serverState.cols.map(function (c) { return omit(c, "v"); }) : undefined
   };
 }
 
@@ -9237,15 +10124,12 @@ async function handleDeleteRemote(server, board) {
 }
 
 async function handleDisconnect(server) {
-  // Las copias locales se conservan: desconectarse no debe borrar trabajo.
-  for (const entry of listAllBoards()) {
-    if (entry.kind === "remote" && entry.remote && entry.remote.serverId === server.id) {
-      patchBoardEntry(entry.slug, { kind: "local", remote: null });
-      clearSnapshot(entry.slug);
-    }
-  }
+  // Las copias locales se conservan: desconectarse no debe borrar trabajo. Y
+  // recuerdan su enlace: al volver a conectar se reenganchan y sincronizan.
+  detachServerBoards(server.id);
+  notifyBoardsChanged();
   await logout(server);
-  showToast("Desconectado. Los tableros descargados quedaron como copias locales.", "info", 6000);
+  showToast("Desconectado. Los tableros descargados siguen como locales y se sincronizarán al volver a conectar.", "info", 7000);
   await renderServers();
   if (typeof _onIndexChanged === "function") _onIndexChanged();
 }
@@ -9395,14 +10279,19 @@ const COMMENT_LINE = /^\s*(?:#|\/\/)/;
 
 // El nombre de la columna también se acepta escrito ("Por hacer", "Hecho"),
 // que es como sale de un tablero leído por una persona.
-const COL_ALIASES = {};
-COLS.forEach(function (c) {
-  COL_ALIASES[c.key.toLowerCase()] = c.key;
-  COL_ALIASES[c.name.toLowerCase()] = c.key;
-});
-COL_ALIASES["doing"] = "inprogress";
-COL_ALIASES["in progress"] = "inprogress";
-COL_ALIASES["todo"] = "todo";
+// Se reconstruye en cada uso: el tablero puede haber renombrado sus columnas,
+// y los nombres de fábrica se siguen aceptando.
+function colAliases() {
+  const aliases = {};
+  DEFAULT_COLS.concat(COLS).forEach(function (c) {
+    aliases[c.key.toLowerCase()] = c.key;
+    aliases[normalizeText(c.name)] = c.key;
+  });
+  aliases["doing"] = "inprogress";
+  aliases["in progress"] = "inprogress";
+  aliases["todo"] = "todo";
+  return aliases;
+}
 
 const PRI_ALIASES = {};
 Object.keys(PRI).forEach(function (k) {
@@ -9420,7 +10309,7 @@ function asPriority(value) {
 }
 
 function asColumn(value) {
-  return COL_ALIASES[normalizeText(value)] || null;
+  return colAliases()[normalizeText(value)] || null;
 }
 
 // Formato completo: ID | WS | prioridad | col | Título | Descripción
@@ -9892,9 +10781,6 @@ function createMissingWs(rows) {
 
 
 
-const COL_NAMES = {};
-COLS.forEach(function (c) { COL_NAMES[c.key] = c.name; });
-
 const FIELD_NAMES = {
   t: "título",
   d: "descripción",
@@ -9909,7 +10795,9 @@ const FIELD_NAMES = {
   title: "título",
   titleThin: "complemento",
   subtitle: "subtítulo",
-  branch: "rama"
+  branch: "rama",
+  name: "nombre",
+  order: "orden"
 };
 
 function initBitacora() {
@@ -10049,8 +10937,10 @@ function verbOf(change) {
   return VERBS[change.action] || "·";
 }
 
+// Los nombres son los del tablero ahora mismo: las columnas se renombran.
 function colName(key) {
-  return COL_NAMES[key] || key || "—";
+  const col = COLS.find(function (c) { return c.key === key; });
+  return (col && col.name) || key || "—";
 }
 
 function fieldList(fields) {
@@ -10088,6 +10978,10 @@ function describe(change) {
     return "cambió " + esc(fieldList(change.fields)) + " del frente " + title;
   }
 
+  if (change.kind === "cols") {
+    return "cambió las columnas · " + esc(fieldList(change.fields));
+  }
+
   return "cambió el encabezado · " + esc(fieldList(change.fields));
 }
 
@@ -10102,6 +10996,169 @@ function formatWhen(ms) {
   if (diff < 86400000) return "hace " + Math.floor(diff / 3600000) + " h";
   return d.toLocaleString("es", {
     day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit"
+  });
+}
+
+  // -- Módulo: js/conflicts.js --
+// Modal de conflictos al reconectar un tablero compartido.
+//
+// Lo que cambió sólo aquí o sólo en el servidor se combina solo (sync.js).
+// Esto es para lo que cambió en los dos lados de forma distinta: la decisión
+// es del usuario, elemento por elemento, y no se aplica nada hasta que todos
+// tienen una. Cerrar el modal no resuelve: el tablero queda en pausa y el
+// indicador de sincronización lo vuelve a abrir.
+
+
+
+
+
+
+
+const FIELD_LABELS = {
+  t: "Título", d: "Descripción", ws: "Frente", pri: "Prioridad", col: "Columna",
+  labels: "Etiquetas", due: "Cierre", cr: "Creada", st: "Inicio", dn: "Terminada", ca: "Movida",
+  label: "Nombre", color: "Color",
+  eyebrow: "Epígrafe", title: "Título", titleThin: "Complemento", subtitle: "Subtítulo", branch: "Rama",
+  cols: "Columnas"
+};
+// Los sellos de fecha acompañan a la columna: mostrarlos sólo añade ruido.
+const HIDDEN = { cr: true, st: true, dn: true, ca: true };
+const KIND_LABELS = { card: "Tarjeta", ws: "Frente", meta: "Encabezado", cols: "Columnas" };
+
+let choices = {};
+
+function initConflictsModal() {
+  const overlay = document.getElementById("conflictOverlay");
+  const closeBtn = document.getElementById("conflictClose");
+  const applyBtn = document.getElementById("conflictApply");
+
+  if (closeBtn) closeBtn.addEventListener("click", closeConflicts);
+  if (overlay) {
+    overlay.addEventListener("mousedown", function (ev) {
+      if (ev.target === overlay) closeConflicts();
+    });
+  }
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key === "Escape" && overlay && overlay.classList.contains("open")) closeConflicts();
+  });
+
+  const bulk = function (value) {
+    const p = getPendingConflict();
+    if (!p) return;
+    p.conflicts.forEach(function (c) { choices[c.key] = value; });
+    renderConflicts();
+  };
+  const mine = document.getElementById("conflictAllMine");
+  const theirs = document.getElementById("conflictAllTheirs");
+  if (mine) mine.addEventListener("click", function () { bulk("mine"); });
+  if (theirs) theirs.addEventListener("click", function () { bulk("theirs"); });
+
+  if (applyBtn) {
+    applyBtn.addEventListener("click", function () {
+      const p = getPendingConflict();
+      if (!p) { closeConflicts(); return; }
+      const faltan = p.conflicts.filter(function (c) { return !choices[c.key]; }).length;
+      if (faltan) {
+        showToast("Falta decidir " + faltan + (faltan === 1 ? " elemento" : " elementos"), "warn", 4000);
+        return;
+      }
+      resolveConflicts(choices);
+      choices = {};
+      closeConflicts();
+      showToast("Conflictos resueltos · sincronizando", "success", 4000);
+    });
+  }
+
+  onConflict(function () { openConflicts(); });
+}
+
+function openConflicts() {
+  const p = getPendingConflict();
+  const overlay = document.getElementById("conflictOverlay");
+  if (!p || !overlay) return;
+  // Las decisiones de un aviso anterior no valen para otro tablero.
+  const vigentes = {};
+  p.conflicts.forEach(function (c) { if (choices[c.key]) vigentes[c.key] = choices[c.key]; });
+  choices = vigentes;
+  renderConflicts();
+  overlay.classList.add("open");
+}
+
+function closeConflicts() {
+  const overlay = document.getElementById("conflictOverlay");
+  if (overlay) overlay.classList.remove("open");
+}
+
+function conflictWsName(key) {
+  const ws = (getState().ws || []).find(function (w) { return w.key === key; });
+  return ws ? ws.label : key;
+}
+
+function conflictColName(key) {
+  const col = COLS.find(function (c) { return c.key === key; });
+  return col ? col.name : key;
+}
+
+function show(kind, field, value) {
+  if (value === undefined || value === null || value === "") return "—";
+  if (Array.isArray(value)) return value.length ? value.join(", ") : "—";
+  if (kind === "card" && field === "ws") return conflictWsName(value);
+  if (kind === "card" && field === "col") return conflictColName(value);
+  if (kind === "card" && field === "pri") return PRI[value] ? PRI[value].label : value;
+  const s = String(value);
+  return s.length > 140 ? s.slice(0, 140) + "…" : s;
+}
+
+function describeSide(c, side) {
+  const v = c[side];
+  if (!v) return '<span class="co-field">Eliminado</span>';
+  if (c.kind === "cols") {
+    return v.map(function (col, i) {
+      return '<span class="co-field">' + (i + 1) + '. <span>' + esc(col.name) + '</span>' +
+        (col.color ? ' · ' + esc(col.color) : '') + '</span>';
+    }).join("");
+  }
+  const fields = c.fields.filter(function (f) { return !HIDDEN[f]; });
+  if (!fields.length) return '<span class="co-field">Fechas de flujo distintas</span>';
+  return fields.map(function (f) {
+    return '<span class="co-field">' + esc(FIELD_LABELS[f] || f) + ': <span>' +
+      esc(show(c.kind, f, v[f])) + '</span></span>';
+  }).join("");
+}
+
+function renderConflicts() {
+  const p = getPendingConflict();
+  const list = document.getElementById("conflictList");
+  const intro = document.getElementById("conflictIntro");
+  if (!p || !list) return;
+
+  if (intro) {
+    intro.textContent = "Mientras estabas desconectado, " +
+      (p.conflicts.length === 1 ? "un elemento cambió" : p.conflicts.length + " elementos cambiaron") +
+      " aquí y también en el servidor. Lo demás ya se combinó solo. Elige qué versión se queda en cada caso; " +
+      "hasta entonces este tablero no se sincroniza.";
+  }
+
+  list.innerHTML = "";
+  p.conflicts.forEach(function (c) {
+    const item = document.createElement("div");
+    item.className = "conflict-item";
+    const name = "cf-" + c.key.replace(/[^a-z0-9_-]/gi, "_");
+    item.innerHTML =
+      '<div class="conflict-head">' + (c.kind === "card" ? '<code>' + esc(c.id) + '</code>' : '') +
+        esc(KIND_LABELS[c.kind] || c.kind) + (c.title && c.kind !== "cols" ? ' · ' + esc(c.title) : '') + '</div>' +
+      '<div class="conflict-options">' +
+        '<label class="conflict-opt"><input type="radio" name="' + name + '" value="mine"' +
+          (choices[c.key] === "mine" ? " checked" : "") + '><span class="co-body"><b>Mi versión (este navegador)</b>' +
+          describeSide(c, "mine") + '</span></label>' +
+        '<label class="conflict-opt"><input type="radio" name="' + name + '" value="theirs"' +
+          (choices[c.key] === "theirs" ? " checked" : "") + '><span class="co-body"><b>Versión del servidor</b>' +
+          describeSide(c, "theirs") + '</span></label>' +
+      '</div>';
+    item.querySelectorAll("input").forEach(function (input) {
+      input.addEventListener("change", function () { choices[c.key] = input.value; });
+    });
+    list.appendChild(item);
   });
 }
 
@@ -10290,7 +11347,7 @@ function render() {
 
     const head = document.createElement("div");
     head.className = "col-head";
-    head.innerHTML = `<span class="name">${col.name}</span><span class="${countClass}" ${countTitle ? `title="${countTitle}"` : ""}>${countText}</span>`;
+    head.innerHTML = `<span class="name">${esc(col.name)}</span><span class="${countClass}" ${countTitle ? `title="${countTitle}"` : ""}>${countText}</span>`;
     colEl.appendChild(head);
 
     const body = document.createElement("div");
@@ -10338,7 +11395,9 @@ const SYNC_LABELS = {
   auth:    "sesión expirada",
   error:   "error de sincronización",
   readonly: "👁 sólo lectura",
-  blocked: "⚠ frenada — pulsa aquí"
+  blocked: "⚠ frenada — pulsa aquí",
+  detached: "desconectado — reconectar",
+  conflict: "⚠ conflictos — decidir"
 };
 
 function renderSyncBadge(status, detail) {
@@ -10375,6 +11434,9 @@ function initBlockedModal(onResolved) {
   if (badge) {
     badge.addEventListener("click", function () {
       if (badge.classList.contains("is-blocked")) abrir();
+      if (badge.classList.contains("is-conflict")) openConflicts();
+      // Desconectado: el selector de tableros tiene el botón para volver a entrar.
+      if (badge.classList.contains("is-detached")) openBoardSelector();
     });
   }
   if (cerrar) cerrar.addEventListener("click", cerrarModal);
@@ -10497,6 +11559,11 @@ function initApp() {
   });
   setSaveHook(scheduleSync);
   initSync(refreshAll);
+  // Sesiones caducadas por reloj mientras la app estaba cerrada: sus tableros
+  // pasan a locales ya, sin esperar a que falle una petición.
+  expireStaleSessions();
+  initColumnsModal(refreshAll);
+  initConflictsModal();
   initHeader(refreshAll);
   initFrentesModal(refreshAll);
   initDataModals(refreshAll);

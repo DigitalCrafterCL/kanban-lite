@@ -77,6 +77,7 @@ function bundleJS() {
     path.join(SRC_DIR, "js", "cards.js"),
     path.join(SRC_DIR, "js", "header.js"),
     path.join(SRC_DIR, "js", "frentes.js"),
+    path.join(SRC_DIR, "js", "columns.js"),
     path.join(SRC_DIR, "js", "io.js"),
     path.join(SRC_DIR, "js", "headmenu.js"),
     path.join(SRC_DIR, "js", "templates.js"),
@@ -84,6 +85,7 @@ function bundleJS() {
     path.join(SRC_DIR, "js", "servers.js"),
     path.join(SRC_DIR, "js", "paste.js"),
     path.join(SRC_DIR, "js", "bitacora.js"),
+    path.join(SRC_DIR, "js", "conflicts.js"),
     path.join(SRC_DIR, "js", "metricsui.js"),
     path.join(SRC_DIR, "js", "render.js"),
     path.join(SRC_DIR, "js", "app.js")

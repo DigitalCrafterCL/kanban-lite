@@ -7,10 +7,13 @@
 // Todo aquí es de mejor esfuerzo: si el servidor no responde, el usuario sigue
 // trabajando en local y los cambios se suben en el siguiente intento.
 
-import { LS_SNAPSHOT_PREFIX, SYNC_POLL_MS, SYNC_DEBOUNCE_MS } from "./config.js";
+import { LS_SNAPSHOT_PREFIX, SYNC_POLL_MS, SYNC_DEBOUNCE_MS, normalizeCols } from "./config.js";
 import { getState, setState, getStateSlug } from "./store.js";
-import { getActiveSlug, getBoardEntry, patchBoardEntry, getBoardKey } from "./boardselector.js";
-import { getServer, isSessionValid, fetchBoard, pushChanges, RemoteError, isDestructiveBlock } from "./remote.js";
+import { getBoardEntry, patchBoardEntry, getBoardKey, listAllBoards } from "./boardselector.js";
+import {
+  getServer, listServers, isSessionValid, fetchBoard, pushChanges, RemoteError, isDestructiveBlock,
+  markSessionExpired
+} from "./remote.js";
 import { showToast } from "./toast.js";
 import { clone } from "./utils.js";
 
@@ -41,12 +44,30 @@ let bloqueoDestructivo = null;
 
 export function getDestructiveBlock() { return bloqueoDestructivo; }
 
+// Reconciliación pendiente de decisión del usuario tras volver a conectar:
+// { slug, version, role, base, remote, conflicts }. Mientras exista, ese
+// tablero no sube ni baja nada.
+let pendingConflict = null;
+const conflictListeners = new Set();
+
+export function onConflict(fn) {
+  conflictListeners.add(fn);
+  return function () { conflictListeners.delete(fn); };
+}
+
+export function getPendingConflict() {
+  if (pendingConflict && pendingConflict.slug === getStateSlug()) return pendingConflict;
+  return null;
+}
+
 // Debe llamarse SIEMPRE antes de cambiar de tablero activo.
 export function invalidateSync() {
   // Cancelar el rebote a secas perdería lo que el usuario acaba de escribir,
   // así que primero se envía, y sólo después se invalida.
   flushPendingChanges();
   generation++;
+  // Se recalcula al volver: la marca `reconcile` sigue en el índice.
+  pendingConflict = null;
   if (debounceTimer) {
     clearTimeout(debounceTimer);
     debounceTimer = null;
@@ -60,6 +81,9 @@ function flushPendingChanges() {
   const ctx = activeRemoteContext();
   if (!ctx || !isSessionValid(ctx.server)) return;
   if ((ctx.remote.role || "write") === "read") return;
+  // Pendiente de reconciliar: subir a ciegas pisaría lo que el equipo hizo
+  // mientras estábamos desconectados, que es justo lo que el usuario decide.
+  if (ctx.remote.reconcile) return;
 
   const slug = ctx.slug;
   const diff = diffState(getState(), readSnapshot(slug));
@@ -67,7 +91,7 @@ function flushPendingChanges() {
 
   pushChanges(ctx.server, ctx.remote.boardId, {
     baseVersion: ctx.remote.baseVersion || 0,
-    cards: diff.cards, ws: diff.ws, meta: diff.meta, deletes: diff.deletes
+    cards: diff.cards, ws: diff.ws, meta: diff.meta, cols: diff.cols, deletes: diff.deletes
   }).then(function (r) {
     // Si el usuario ya volvió a este tablero, la sincronización normal manda.
     if (getStateSlug() === slug) return;
@@ -127,7 +151,7 @@ export function clearSnapshot(slug) {
 
 // El campo `v` lo administra el servidor; el modelo local no lo necesita.
 function stripVersions(serverState) {
-  return {
+  const out = {
     rev: serverState.rev || 2,
     meta: pickFields(serverState.meta || {}, META_FIELDS),
     ws: (serverState.ws || []).map(function (w) {
@@ -137,6 +161,15 @@ function stripVersions(serverState) {
       return Object.assign({ id: c.id }, pickFields(c, CARD_FIELDS));
     })
   };
+  if (Array.isArray(serverState.cols)) out.cols = normalizeCols(serverState.cols);
+  return out;
+}
+
+// Las columnas se comparan como lista entera: el orden también es un cambio.
+// Un tablero que nunca tocó sus columnas no tiene `cols`, y eso equivale a la
+// lista de fábrica.
+function colsKey(cols) {
+  return JSON.stringify(normalizeCols(cols));
 }
 
 function pickFields(source, fields) {
@@ -191,11 +224,14 @@ export function diffState(current, snapshot) {
   if (!sameFields(current.meta || {}, base.meta || {}, META_FIELDS)) {
     out.meta = pickFields(current.meta || {}, META_FIELDS);
   }
+  if (Array.isArray(current.cols) && colsKey(current.cols) !== colsKey(base.cols)) {
+    out.cols = normalizeCols(current.cols);
+  }
   return out;
 }
 
 export function hasChanges(diff) {
-  return Boolean(diff.cards.length || diff.ws.length || diff.deletes.length || diff.meta);
+  return Boolean(diff.cards.length || diff.ws.length || diff.deletes.length || diff.meta || diff.cols);
 }
 
 // Reaplica sobre `state` los cambios que el usuario hizo mientras la petición
@@ -219,6 +255,7 @@ function applyDiff(state, diff) {
     else next.ws.push(Object.assign({}, ws));
   }
   if (diff.meta) next.meta = Object.assign({}, next.meta, diff.meta);
+  if (diff.cols) next.cols = clone(diff.cols);
   return next;
 }
 
@@ -299,6 +336,7 @@ export function scheduleSync() {
     debounceTimer = setTimeout(function () { syncNow(); }, SYNC_DEBOUNCE_MS);
     return;
   }
+  if (getPendingConflict()) return;
   if (currentStatus !== "syncing") setStatus("pending");
   if (debounceTimer) clearTimeout(debounceTimer);
   debounceTimer = setTimeout(function () { syncNow(); }, SYNC_DEBOUNCE_MS);
@@ -307,8 +345,9 @@ export function scheduleSync() {
 // Llamar al cambiar de tablero para que el indicador refleje el nuevo contexto.
 export function refreshSyncStatus() {
   const ctx = activeRemoteContext();
-  if (!ctx) { setStatus("local"); return; }
-  if (!isSessionValid(ctx.server)) { setStatus("auth", "Sesión expirada"); return; }
+  if (!ctx) { setLocalStatus(); return; }
+  if (!isSessionValid(ctx.server)) { expireSession(ctx.server); return; }
+  if (getPendingConflict()) { setStatus("conflict", CONFLICT_DETAIL); return; }
   if ((ctx.remote.role || "write") === "read") {
     setStatus("readonly", "Sólo lectura: no puedes editar este tablero");
     return;
@@ -372,8 +411,9 @@ export async function syncNow(opciones) {
   if (inFlight) return;
   if (isEditorOpen()) return;
   const ctx = activeRemoteContext();
-  if (!ctx) { setStatus("local"); return; }
-  if (!isSessionValid(ctx.server)) { setStatus("auth", "Sesión expirada"); return; }
+  if (!ctx) { setLocalStatus(); return; }
+  if (!isSessionValid(ctx.server)) { expireSession(ctx.server); return; }
+  if (getPendingConflict()) { setStatus("conflict", CONFLICT_DETAIL); return; }
 
   const slug = ctx.slug;
   const myGeneration = generation;
@@ -397,6 +437,17 @@ export async function syncNow(opciones) {
   inFlight = true;
   setStatus("syncing");
   try {
+    // Recién reenganchado tras una desconexión: antes de subir nada se
+    // compara con lo que el equipo hizo mientras tanto.
+    if (ctx.remote.reconcile) {
+      const listo = await reconcile(ctx, sigueVigente);
+      if (!listo) return;
+      // Reconciliado sin choques: el estado ya está fusionado y la
+      // instantánea al día; lo que quede por subir sale en el próximo turno.
+      setTimeout(function () { syncNow(); }, 0);
+      return;
+    }
+
     let version, serverState, conflicts = [];
 
     // El `if` mira el rol antes que la diferencia: si un invitado de sólo
@@ -406,7 +457,7 @@ export async function syncNow(opciones) {
     if (!soloLectura && hasChanges(diff)) {
       const r = await pushChanges(ctx.server, ctx.remote.boardId, {
         baseVersion: baseVersion,
-        cards: diff.cards, ws: diff.ws, meta: diff.meta, deletes: diff.deletes,
+        cards: diff.cards, ws: diff.ws, meta: diff.meta, cols: diff.cols, deletes: diff.deletes,
         confirmDestructive: Boolean(opciones && opciones.confirmDestructive)
       });
       // El servidor ya aplicó el cambio; sólo descartamos la respuesta local.
@@ -493,8 +544,9 @@ function handleSyncError(err) {
     return;
   }
   if (err instanceof RemoteError && err.isAuth) {
-    setStatus("auth", "Sesión expirada");
-    showToast("Tu sesión en el servidor expiró. Vuelve a entrar desde ⊞ Tableros.", "warn", 7000);
+    const ctx = activeRemoteContext();
+    if (ctx) expireSession(ctx.server);
+    else setStatus("auth", "Sesión expirada");
     return;
   }
   if (err instanceof RemoteError && err.status === 404) {
@@ -518,4 +570,295 @@ function handleSyncError(err) {
   }
   console.error("Error de sincronización:", err);
   setStatus("error", (err && err.message) || "Error desconocido");
+}
+
+// -- Desconexión automática y reenganche ------------------------------------
+//
+// Cuando la sesión caduca, los tableros de ese servidor pasan a ser locales
+// sin que nadie tenga que pulsar «Desconectar»: se puede seguir trabajando.
+// Pero no se olvida de dónde venían: la entrada guarda `detached` (el enlace
+// remoto) y la instantánea de la última sincronización se conserva. Al volver
+// a entrar en el mismo servidor con el mismo usuario se reenganchan solos y se
+// reconcilian contra lo que el equipo hizo mientras tanto.
+
+const DETACHED_DETAIL = "Desconectado del servidor. Vuelve a conectarte desde ⊞ Tableros y los cambios se sincronizarán solos.";
+const CONFLICT_DETAIL = "Hay cambios tuyos y del equipo sobre lo mismo. Pulsa para decidir qué versión se queda.";
+
+function setLocalStatus() {
+  const entry = getBoardEntry(getStateSlug());
+  if (entry && entry.kind !== "remote" && entry.detached) setStatus("detached", DETACHED_DETAIL);
+  else setStatus("local");
+}
+
+export function detachedServerOf(slug) {
+  const entry = getBoardEntry(slug);
+  return entry && entry.kind !== "remote" && entry.detached ? entry.detached.serverId : null;
+}
+
+// Pasa a locales los tableros de un servidor recordando su enlace.
+export function detachServerBoards(serverId) {
+  const now = new Date().toISOString();
+  let n = 0;
+  for (const entry of listAllBoards()) {
+    if (entry.kind === "remote" && entry.remote && entry.remote.serverId === serverId) {
+      patchBoardEntry(entry.slug, {
+        kind: "local", remote: null,
+        detached: Object.assign({}, entry.remote, { detachedAt: now })
+      });
+      n++;
+    }
+  }
+  return n;
+}
+
+// Reengancha los tableros desconectados de un servidor. Devuelve sus slugs.
+export function reattachServerBoards(serverId) {
+  const slugs = [];
+  for (const entry of listAllBoards()) {
+    const d = entry.detached;
+    if (entry.kind === "remote" || !d || d.serverId !== serverId) continue;
+    const remote = Object.assign({}, d, { reconcile: true });
+    delete remote.detachedAt;
+    patchBoardEntry(entry.slug, { kind: "remote", remote: remote, detached: null });
+    slugs.push(entry.slug);
+  }
+  return slugs;
+}
+
+// Tras reenganchar: si el tablero en pantalla es uno de ellos, la interfaz se
+// pone al día (bitácora, sólo lectura, indicador) y arranca la reconciliación.
+export function resumeAfterReattach(slugs) {
+  if (!slugs || slugs.indexOf(getStateSlug()) < 0) return;
+  if (typeof onAppliedCallback === "function") onAppliedCallback();
+  refreshSyncStatus();
+  syncNow();
+}
+
+// Tras desconectar a mano: el tablero en pantalla pudo dejar de ser remoto.
+export function notifyBoardsChanged() {
+  if (typeof onAppliedCallback === "function") onAppliedCallback();
+  refreshSyncStatus();
+}
+
+// Desconexión automática por sesión caducada. Idempotente: varias pestañas o
+// varios sondeos pueden llegar aquí a la vez.
+export function expireSession(server) {
+  const yaCaducada = !server.token;
+  markSessionExpired(server.id);
+  const n = detachServerBoards(server.id);
+  if (n || !yaCaducada) {
+    showToast("Tu sesión en " + server.url + " expiró. " +
+      (n ? (n === 1 ? "El tablero compartido sigue" : "Los " + n + " tableros compartidos siguen") +
+           " aquí como local" + (n === 1 ? "" : "es") + "; al volver a conectarte se sincronizará" +
+           (n === 1 ? "" : "n") + " solo" + (n === 1 ? "" : "s") + "."
+         : "Vuelve a conectarte desde ⊞ Tableros."), "warn", 9000);
+  }
+  if (typeof onAppliedCallback === "function") onAppliedCallback();
+  setLocalStatus();
+}
+
+// Al arrancar: sesiones caducadas por reloj. No toca la red.
+export function expireStaleSessions() {
+  for (const server of listServers()) {
+    if (server.token && !isSessionValid(server)) expireSession(server);
+  }
+}
+
+// -- Reconciliación a tres vías ---------------------------------------------
+//
+// base = instantánea de la última sincronización (lo que ambos lados tenían),
+// local = lo que hay en este navegador, remote = lo que hay ahora en el
+// servidor. Lo que sólo cambió de un lado se combina solo, campo a campo. Lo
+// que cambió de los dos lados de forma distinta es un conflicto y lo decide
+// el usuario: «mine» se queda con lo de este navegador, «theirs» con lo del
+// servidor. Los comentarios nunca chocan: se unen.
+
+const CARD_MERGE_FIELDS = CARD_FIELDS.filter(function (f) { return f !== "comments"; });
+
+function unionComments(a, b) {
+  const byId = new Map();
+  (Array.isArray(a) ? a : []).forEach(function (c) { if (c && c.id) byId.set(c.id, c); });
+  (Array.isArray(b) ? b : []).forEach(function (c) { if (c && c.id && !byId.has(c.id)) byId.set(c.id, c); });
+  return [...byId.values()].sort(function (x, y) { return String(x.at || "").localeCompare(String(y.at || "")); });
+}
+
+function changedFields(a, b, fields) {
+  return fields.filter(function (f) { return normValue(a[f]) !== normValue(b[f]); });
+}
+
+function mergeEntities(kind, idKey, fields, baseList, localList, out, choices, conflicts) {
+  const baseMap = new Map((baseList || []).map(function (x) { return [x[idKey], x]; }));
+  const localMap = new Map((localList || []).map(function (x) { return [x[idKey], x]; }));
+  const ids = new Set([...baseMap.keys(), ...localMap.keys()]);
+  const titleOf = function (x) { return x ? (kind === "card" ? x.t : x.label) : ""; };
+
+  for (const id of ids) {
+    const b = baseMap.get(id), l = localMap.get(id);
+    const ri = out.findIndex(function (x) { return x[idKey] === id; });
+    const r = ri >= 0 ? out[ri] : null;
+    const key = kind + ":" + id;
+    const mine = (choices[key] || "mine") === "mine";
+    const conflict = function (clash) {
+      conflicts.push({ key: key, kind: kind, id: id, title: titleOf(l) || titleOf(r) || titleOf(b),
+                       fields: clash, mine: l ? clone(l) : null, theirs: r ? clone(r) : null });
+    };
+
+    if (!b) {
+      // Nuevo en este navegador (o creado a la vez en los dos lados).
+      if (!l) continue;
+      if (!r) { out.push(clone(l)); continue; }
+      const clash = changedFields(l, r, fields);
+      if (clash.length) {
+        conflict(clash);
+        if (mine) out[ri] = Object.assign({}, r, clone(l));
+      }
+      if (kind === "card") out[ri].comments = unionComments(r.comments, l.comments);
+      continue;
+    }
+
+    if (!l) {
+      // Borrado aquí.
+      if (!r) continue;
+      if (!changedFields(r, b, fields).length) { out.splice(ri, 1); continue; }
+      conflict(changedFields(r, b, fields));
+      if (mine) out.splice(ri, 1);
+      continue;
+    }
+
+    const localChanged = changedFields(l, b, fields);
+    if (!r) {
+      // Borrado en el servidor. Si aquí no se tocó, se acepta el borrado.
+      if (!localChanged.length) continue;
+      conflict(localChanged);
+      if (mine) out.push(clone(l));
+      continue;
+    }
+    const remoteChanged = changedFields(r, b, fields);
+    const clash = localChanged.filter(function (f) {
+      return remoteChanged.indexOf(f) >= 0 && normValue(l[f]) !== normValue(r[f]);
+    });
+    if (clash.length) conflict(clash);
+    const next = Object.assign({}, r);
+    localChanged.forEach(function (f) {
+      if (clash.indexOf(f) < 0 || mine) next[f] = clone(l[f]);
+    });
+    if (kind === "card") next.comments = unionComments(r.comments, l.comments);
+    out[ri] = next;
+  }
+}
+
+/**
+ * Fusiona base/local/remote. Con `choices` vacío sirve para detectar: lo que
+ * choca se apunta en `conflicts` (y provisionalmente se resuelve a favor de
+ * lo local). Con las decisiones del usuario produce el estado definitivo.
+ */
+export function threeWayMerge(base, local, remote, choices) {
+  choices = choices || {};
+  base = base || { meta: {}, ws: [], cards: [] };
+  const conflicts = [];
+  const out = clone(remote);
+  out.cards = out.cards || [];
+  out.ws = out.ws || [];
+
+  mergeEntities("ws", "key", WS_FIELDS, base.ws, local.ws, out.ws, choices, conflicts);
+  mergeEntities("card", "id", CARD_MERGE_FIELDS, base.cards, local.cards, out.cards, choices, conflicts);
+
+  // Encabezado: una sola entidad, campo a campo.
+  const bm = base.meta || {}, lm = local.meta || {}, rm = remote.meta || {};
+  const metaLocal = changedFields(lm, bm, META_FIELDS);
+  if (metaLocal.length) {
+    const metaRemote = changedFields(rm, bm, META_FIELDS);
+    const clash = metaLocal.filter(function (f) {
+      return metaRemote.indexOf(f) >= 0 && normValue(lm[f]) !== normValue(rm[f]);
+    });
+    const mine = (choices["meta:meta"] || "mine") === "mine";
+    if (clash.length) {
+      conflicts.push({ key: "meta:meta", kind: "meta", id: "meta", title: lm.title || rm.title || "",
+                       fields: clash, mine: clone(lm), theirs: clone(rm) });
+    }
+    out.meta = Object.assign({}, rm);
+    metaLocal.forEach(function (f) {
+      if (clash.indexOf(f) < 0 || mine) out.meta[f] = lm[f];
+    });
+  }
+
+  // Columnas: la lista entera es una pieza (el orden es del conjunto).
+  const colsLocal = colsKey(local.cols) !== colsKey(base.cols);
+  if (colsLocal) {
+    const colsRemote = colsKey(remote.cols) !== colsKey(base.cols);
+    const clash = colsRemote && colsKey(local.cols) !== colsKey(remote.cols);
+    const mine = (choices["cols:cols"] || "mine") === "mine";
+    if (clash) {
+      conflicts.push({ key: "cols:cols", kind: "cols", id: "cols", title: "Columnas",
+                       fields: ["cols"], mine: normalizeCols(local.cols), theirs: normalizeCols(remote.cols) });
+    }
+    if (!clash || mine) out.cols = normalizeCols(local.cols);
+  }
+
+  return { state: out, conflicts: conflicts };
+}
+
+// Primer contacto tras reenganchar. Devuelve true si quedó reconciliado sin
+// intervención; false si hay que esperar al usuario (o se abandonó).
+async function reconcile(ctx, sigueVigente) {
+  const slug = ctx.slug;
+  const fresh = await fetchBoard(ctx.server, ctx.remote.boardId);
+  if (!sigueVigente()) return false;
+
+  const remote = stripVersions(fresh.state);
+  const base = readSnapshot(slug) || { meta: {}, ws: [], cards: [] };
+  const role = fresh.role || ctx.remote.role || "write";
+
+  // Sin permiso de escritura no hay nada que decidir: manda el servidor.
+  if (role === "read") {
+    finishReconcile(slug, fresh.version, role, remote, remote);
+    if (hasChanges(diffState(getState(), remote))) {
+      showToast("Tablero de sólo lectura: se descartaron los cambios hechos sin conexión", "warn", 7000);
+    }
+    return true;
+  }
+
+  const r = threeWayMerge(base, getState(), remote);
+  if (!r.conflicts.length) {
+    finishReconcile(slug, fresh.version, role, remote, r.state);
+    return true;
+  }
+
+  pendingConflict = { slug: slug, version: fresh.version, role: role, base: base, remote: remote,
+                      conflicts: r.conflicts };
+  setStatus("conflict", CONFLICT_DETAIL);
+  showToast(r.conflicts.length === 1
+    ? "Al reconectar, un elemento cambió aquí y en el servidor: decide cuál se queda"
+    : "Al reconectar, " + r.conflicts.length + " elementos cambiaron aquí y en el servidor: decide cuáles se quedan",
+    "warn", 8000);
+  for (const fn of conflictListeners) fn(pendingConflict);
+  return false;
+}
+
+function finishReconcile(slug, version, role, remote, merged) {
+  const entry = getBoardEntry(slug);
+  if (!entry || !entry.remote || getStateSlug() !== slug) return;
+  writeSnapshot(slug, remote);
+  const nextRemote = Object.assign({}, entry.remote, {
+    baseVersion: version, role: role, lastSync: new Date().toISOString()
+  });
+  delete nextRemote.reconcile;
+  patchBoardEntry(slug, { remote: nextRemote });
+  pendingConflict = null;
+  applying = true;
+  try { setState(merged, true); } finally { applying = false; }
+  if (typeof onAppliedCallback === "function") onAppliedCallback();
+  setStatus(role === "read" ? "readonly" : (hasChanges(diffState(getState(), remote)) ? "pending" : "synced"));
+}
+
+// Decisión del usuario: { "card:ID": "mine" | "theirs", ... }. Se recalcula
+// sobre el estado local de ahora, por si se siguió editando con el aviso
+// abierto; lo que no tenga decisión se queda con lo local.
+export function resolveConflicts(choices) {
+  const p = getPendingConflict();
+  if (!p) return false;
+  const r = threeWayMerge(p.base, getState(), p.remote, choices || {});
+  finishReconcile(p.slug, p.version, p.role, p.remote, r.state);
+  syncNow();
+  return true;
 }

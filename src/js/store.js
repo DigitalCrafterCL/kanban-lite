@@ -1,5 +1,5 @@
 import seedData from "../data/seed.js";
-import { SEED_REV, REV_PATCHES, DEFAULT_META, normalizeStamps } from "./config.js";
+import { SEED_REV, REV_PATCHES, DEFAULT_META, normalizeStamps, applyBoardCols, normalizeCols } from "./config.js";
 import { clone } from "./utils.js";
 import { getBoardKey, getActiveSlug, touchBoard, getBoardName, getBoardEntry, isRemote } from "./boardselector.js";
 import { showToast } from "./toast.js";
@@ -29,6 +29,12 @@ function notify() {
   for (const fn of listeners) fn(state);
 }
 
+// Las columnas son del tablero: cada vez que cambia el estado en memoria se
+// vuelcan en COLS, que es lo que recorren el render, las métricas y la ficha.
+function syncCols() {
+  applyBoardCols(state && state.cols);
+}
+
 export function pushHistory() {
   if (state) {
     undoStack.push(clone(state));
@@ -44,6 +50,7 @@ export function undo() {
   if (!canUndo()) return false;
   redoStack.push(clone(state));
   state = undoStack.pop();
+  syncCols();
   saveState();
   notify();
   return true;
@@ -53,6 +60,7 @@ export function redo() {
   if (!canRedo()) return false;
   undoStack.push(clone(state));
   state = redoStack.pop();
+  syncCols();
   saveState();
   notify();
   return true;
@@ -97,6 +105,7 @@ export function applyMigrations(s) {
 export function resetStore() {
   state = null;
   stateSlug = null;
+  syncCols();
   undoStack.length = 0;
   redoStack.length = 0;
 }
@@ -128,6 +137,7 @@ export function initStore() {
   if (!state) {
     stateSlug = getActiveSlug();
     state = loadState();
+    syncCols();
   }
   return state;
 }
@@ -137,6 +147,7 @@ export function initStore() {
 export function reloadFromStorage() {
   if (!stateSlug) return false;
   state = loadState();
+  syncCols();
   notify();
   return true;
 }
@@ -150,6 +161,7 @@ export function setState(newState, shouldSave = true) {
   if (!newState.meta) newState.meta = clone(DEFAULT_META);
   if (!stateSlug) stateSlug = getActiveSlug();
   state = newState;
+  syncCols();
   if (shouldSave) saveState();
   notify();
 }
@@ -184,6 +196,17 @@ export function saveState() {
   }
 }
 
+// Personalización de columnas: [{ key, name, color }] en el orden del tablero.
+// Se guarda la lista completa: así la sincronización la trata como una sola
+// pieza y el orden viaja junto con los nombres y los colores.
+export function setCols(cols) {
+  const current = getState();
+  current.cols = normalizeCols(cols);
+  syncCols();
+  saveState();
+  notify();
+}
+
 export function wsById(key) {
   const current = getState();
   for (let i = 0; i < current.ws.length; i++) {
@@ -200,7 +223,9 @@ export function nextId(ws) {
   // crean una tarjeta a la vez calculan el mismo número desde su propia vista,
   // la fusión las trata como la misma entidad y una de las dos se pierde.
   // Un sufijo aleatorio hace el id único entre clientes sin coordinación.
-  if (isRemote(getBoardEntry(getActiveSlug()))) {
+  // Un tablero desconectado del servidor también: volverá a él al reconectar.
+  const entry = getBoardEntry(stateSlug || getActiveSlug());
+  if (isRemote(entry) || (entry && entry.detached)) {
     const taken = new Set(current.cards.map(function (c) { return c.id; }));
     let id;
     do {

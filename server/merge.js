@@ -132,6 +132,33 @@ export function sanitizeWs(raw) {
   return ws;
 }
 
+// Columnas del tablero: nombre, orden y color. Viajan como una lista entera
+// con una sola versión (`colsV`): el orden es una propiedad del conjunto, no
+// de cada columna, y fusionarlas por separado podría dejar dos columnas en la
+// misma posición. Las claves las decide el cliente; aquí sólo se acotan.
+const MAX_COLS = 20;
+const MAX_COL_NAME = 30;
+const HEX_COLOR = /^#[0-9a-f]{6}$/i;
+
+export function sanitizeCols(raw) {
+  if (!Array.isArray(raw)) return null;
+  const out = [];
+  const seen = new Set();
+  for (const c of raw.slice(0, MAX_COLS)) {
+    if (!c || typeof c !== "object") continue;
+    const key = str(c.key, 40).trim();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    const color = str(c.color, 7);
+    out.push({ key, name: str(c.name, MAX_COL_NAME).trim(), color: HEX_COLOR.test(color) ? color.toLowerCase() : "" });
+  }
+  return out.length ? out : null;
+}
+
+function sameCols(a, b) {
+  return JSON.stringify(a || null) === JSON.stringify(b || null);
+}
+
 export function sanitizeMeta(raw) {
   return pick(raw && typeof raw === "object" ? raw : {}, META_FIELDS);
 }
@@ -160,6 +187,9 @@ export function sanitizeState(raw, version) {
     seenWs.add(clean.key);
     base.ws.push(Object.assign(clean, { v: version }));
   }
+
+  const cols = sanitizeCols(raw.cols);
+  if (cols) { base.cols = cols; base.colsV = version; }
 
   const seenCards = new Set();
   for (const c of Array.isArray(raw.cards) ? raw.cards.slice(0, MAX_CARDS) : []) {
@@ -216,6 +246,7 @@ export function mergeBoard(stored, incoming, baseVersion, version) {
     cards: stored.cards.map(c => Object.assign({}, c)),
     deleted: (stored.deleted || []).map(d => Object.assign({}, d))
   };
+  if (stored.cols) { state.cols = stored.cols.map(c => Object.assign({}, c)); state.colsV = stored.colsV || 0; }
 
   const conflicts = [];
   let changed = false;
@@ -299,6 +330,15 @@ export function mergeBoard(stored, incoming, baseVersion, version) {
       state.meta = Object.assign(clean, { v: version });
       changed = true;
     }
+  }
+
+  // -- Columnas --
+  const cols = sanitizeCols(incoming.cols);
+  if (cols && !sameCols(cols, state.cols)) {
+    if ((state.colsV || 0) > baseVersion) conflicts.push("cols");
+    state.cols = cols;
+    state.colsV = version;
+    changed = true;
   }
 
   state.ws = [...wsIndex.values()];
@@ -387,6 +427,16 @@ export function diffStates(prev, next) {
   }
   for (const [key, ws] of prevWs) {
     if (!nextWs.has(key)) changes.push({ kind: "ws", action: "delete", id: key, title: ws.label });
+  }
+
+  if (!sameCols(prev.cols, next.cols)) {
+    const antes = new Map((prev.cols || []).map(c => [c.key, c]));
+    const fields = [];
+    const orden = c => (c || []).map(x => x.key).join(",");
+    if (prev.cols && orden(prev.cols) !== orden(next.cols)) fields.push("order");
+    if ((next.cols || []).some(c => (antes.get(c.key) || {}).name !== c.name)) fields.push("name");
+    if ((next.cols || []).some(c => ((antes.get(c.key) || {}).color || "") !== c.color)) fields.push("color");
+    changes.push({ kind: "cols", action: "edit", id: "cols", title: "", fields: fields.length ? fields : ["name"] });
   }
 
   const metaFields = META_FIELDS.filter(f =>

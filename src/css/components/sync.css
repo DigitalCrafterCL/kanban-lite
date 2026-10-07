@@ -226,3 +226,79 @@
   border-color: var(--line-2);
   background: var(--card-hi);
 }
+
+/* -- Tablero desconectado del servidor y reconciliación -- */
+.bs-badge-detached { color: var(--pr-alta); border-color: var(--pr-alta); }
+
+.sync-status.is-detached {
+  color: var(--pr-alta);
+  border-color: var(--pr-alta);
+  cursor: pointer;
+}
+
+.sync-status.is-conflict {
+  color: var(--pr-critica);
+  border-color: var(--pr-critica);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.sync-status.is-detached:hover,
+.sync-status.is-conflict:hover { background: var(--card-hi); }
+
+.srv-reconnect { border-top: none; padding: 4px 6px 0; }
+.srv-reconnect-msg { margin: 4px 6px 6px; }
+.srv-reconnect-msg.err { color: var(--pr-critica); }
+
+.modal.modal-wide { max-width: 760px; width: 100%; }
+
+.conflict-bulk { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.conflict-bulk .btn { justify-content: center; }
+
+.conflict-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+
+.conflict-item {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  background: var(--card);
+  padding: 10px 12px;
+}
+
+.conflict-head {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+
+.conflict-head code { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-right: 6px; }
+
+.conflict-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.conflict-opt {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  border: 1px solid var(--line-2);
+  border-radius: 7px;
+  padding: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--ink-2);
+  min-width: 0;
+}
+
+.conflict-opt:has(input:checked) { border-color: var(--accent); background: var(--card-hi); }
+.conflict-opt input { margin-top: 2px; flex: none; }
+.conflict-opt .co-body { min-width: 0; overflow-wrap: anywhere; }
+.conflict-opt b { display: block; font-family: var(--font-display); font-size: 12px; color: var(--ink); margin-bottom: 3px; }
+.conflict-opt .co-field { display: block; color: var(--muted); }
+.conflict-opt .co-field span { color: var(--ink-2); }
+
+.conflict-foot { display: flex; justify-content: flex-end; }
+.conflict-foot .btn { justify-content: center; }
+
+@media (max-width: 640px) {
+  .conflict-options { grid-template-columns: 1fr; }
+}

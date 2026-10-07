@@ -5,6 +5,7 @@ import { updateStats } from "./stats.js";
 import { createCardElement, createAddBlock } from "./cards.js";
 import { attachColumnDrop } from "./dnd.js";
 import { refreshAgingThreshold } from "./metrics.js";
+import { esc } from "./utils.js";
 
 export function render() {
   const state = getState();
@@ -35,7 +36,7 @@ export function render() {
 
     const head = document.createElement("div");
     head.className = "col-head";
-    head.innerHTML = `<span class="name">${col.name}</span><span class="${countClass}" ${countTitle ? `title="${countTitle}"` : ""}>${countText}</span>`;
+    head.innerHTML = `<span class="name">${esc(col.name)}</span><span class="${countClass}" ${countTitle ? `title="${countTitle}"` : ""}>${countText}</span>`;
     colEl.appendChild(head);
 
     const body = document.createElement("div");

@@ -1,5 +1,5 @@
 import seedData from "../data/seed.js";
-import { SEED_REV, normalizeStamps } from "./config.js";
+import { SEED_REV, normalizeStamps, normalizeCols } from "./config.js";
 import { setState, pushHistory } from "./store.js";
 import { resetFilters } from "./filters.js";
 import { showToast } from "./toast.js";
@@ -81,6 +81,110 @@ export const TEMPLATES = {
       { id: "CASA-1", ws: "CASA", pri: "media", col: "todo",       t: "Mantenimiento del computador", d: "Limpieza de disco, copias de seguridad y actualización del SO." },
       { id: "VIDA-1", ws: "VIDA", pri: "media", col: "backlog",    t: "Plan de entrenamiento físico", d: "Establecer rutina de 3 sesiones semanales de cardio y fuerza." },
       { id: "FIN-0",  ws: "FIN",  pri: "baja",  col: "done",       t: "Declaración anual de impuestos", d: "Documentación enviada y aprobada." }
+    ]
+  },
+
+  // Las plantillas de operación traen sus propias columnas: el flujo de un
+  // ticket o de una orden de trabajo no se llama «Backlog» ni «En progreso».
+  // Las claves siguen siendo las de siempre, así que las métricas funcionan.
+  soporte: {
+    name: "Soporte Técnico",
+    desc: "Mesa de ayuda: tickets desde la recepción hasta la resolución, con espera de cliente y escalamiento.",
+    meta: {
+      eyebrow: "Mesa de Ayuda",
+      title: "Soporte Técnico",
+      titleThin: "· Tickets",
+      subtitle: "Recepción, diagnóstico, atención y cierre de incidencias",
+      branch: "v1.0"
+    },
+    cols: [
+      { key: "backlog",    name: "Recibidos" },
+      { key: "todo",       name: "Clasificados" },
+      { key: "inprogress", name: "En atención" },
+      { key: "blocked",    name: "Esperando cliente / 3.º" },
+      { key: "done",       name: "Resueltos" }
+    ],
+    ws: [
+      { key: "N1",  label: "Nivel 1 · Mesa",       color: "#0a8fa6" },
+      { key: "N2",  label: "Nivel 2 · Escalado",   color: "#6172f3" },
+      { key: "RED", label: "Redes y conectividad", color: "#e0721c" },
+      { key: "HW",  label: "Hardware",             color: "#8a5a2b" },
+      { key: "ACC", label: "Accesos y cuentas",    color: "#3aa03a" }
+    ],
+    cards: [
+      { id: "N1-1",  ws: "N1",  pri: "media",   col: "backlog",    t: "Usuario no puede imprimir", d: "**Solicitante:** \n**Equipo / ubicación:** \n**Desde cuándo:** \n\n- [ ] Verificar cola de impresión\n- [ ] Reinstalar controlador", labels: ["impresion"] },
+      { id: "ACC-1", ws: "ACC", pri: "alta",    col: "backlog",    t: "Restablecer contraseña de correo", d: "Validar identidad antes de restablecer.\n\n- [ ] Validar identidad\n- [ ] Forzar cambio en el próximo inicio", labels: ["cuentas"] },
+      { id: "RED-1", ws: "RED", pri: "critica", col: "todo",       t: "Sin conexión en sala de reuniones", d: "Afecta a varios usuarios. Revisar punto de acceso y switch del piso.", labels: ["wifi"] },
+      { id: "HW-1",  ws: "HW",  pri: "media",   col: "todo",       t: "Notebook con batería que no carga", d: "- [ ] Probar con otro cargador\n- [ ] Revisar garantía\n- [ ] Coordinar equipo de reemplazo", labels: ["garantia"] },
+      { id: "N2-1",  ws: "N2",  pri: "alta",    col: "inprogress", t: "Error al abrir sistema contable", d: "Escalado desde Nivel 1. Reproducido en dos equipos.\n\n- [x] Recopilar captura del error\n- [ ] Revisar registro del servidor\n- [ ] Probar en ambiente de pruebas" },
+      { id: "N1-2",  ws: "N1",  pri: "baja",    col: "blocked",    t: "Instalar software de diseño", d: "Esperando aprobación de licencia por parte de la jefatura.", labels: ["licencias"] },
+      { id: "N1-3",  ws: "N1",  pri: "media",   col: "done",       t: "Configurar correo en celular nuevo", d: "Resuelto en remoto. Usuario confirma funcionamiento." }
+    ]
+  },
+
+  comercial: {
+    name: "Comerciales",
+    desc: "Embudo de ventas: oportunidades desde el primer contacto hasta el cierre, por segmento de cliente.",
+    meta: {
+      eyebrow: "Gestión Comercial",
+      title: "Embudo de Ventas",
+      titleThin: "· Oportunidades",
+      subtitle: "Prospección, propuesta, negociación y cierre",
+      branch: "v1.0"
+    },
+    cols: [
+      { key: "backlog",    name: "Prospectos" },
+      { key: "todo",       name: "Contactados" },
+      { key: "inprogress", name: "Propuesta enviada" },
+      { key: "blocked",    name: "En negociación" },
+      { key: "done",       name: "Cerrados" }
+    ],
+    ws: [
+      { key: "EMP", label: "Empresas",          color: "#3c74e0" },
+      { key: "PYM", label: "Pymes",             color: "#12a594" },
+      { key: "PUB", label: "Sector público",    color: "#9a72f0" },
+      { key: "REN", label: "Renovaciones",      color: "#e0b21c" }
+    ],
+    cards: [
+      { id: "EMP-1", ws: "EMP", pri: "alta",    col: "backlog",    t: "Distribuidora del Norte", d: "**Contacto:** \n**Necesidad:** \n**Monto estimado:** \n\nReferido por cliente actual.", labels: ["referido"] },
+      { id: "PYM-1", ws: "PYM", pri: "media",   col: "backlog",    t: "Ferretería La Esquina", d: "Llegó por formulario web. Interesado en plan básico.", labels: ["web"] },
+      { id: "PUB-1", ws: "PUB", pri: "alta",    col: "todo",       t: "Municipalidad · licitación de servicios", d: "- [ ] Descargar bases\n- [ ] Revisar requisitos administrativos\n- [ ] Consultas al foro antes del plazo", labels: ["licitacion"] },
+      { id: "EMP-2", ws: "EMP", pri: "critica", col: "inprogress", t: "Constructora Andes · propuesta anual", d: "Propuesta enviada. Hacer seguimiento a los 5 días.\n\n- [x] Enviar propuesta\n- [ ] Llamada de seguimiento", labels: ["seguimiento"] },
+      { id: "REN-1", ws: "REN", pri: "alta",    col: "blocked",    t: "Renovación contrato Clínica Sur", d: "Piden 10 % de descuento. Evaluar con gerencia antes de responder.", labels: ["descuento"] },
+      { id: "PYM-2", ws: "PYM", pri: "media",   col: "done",       t: "Panadería Central · ganado", d: "Contrato firmado. Traspasar a implementación.", labels: ["ganado"] }
+    ]
+  },
+
+  mantenimiento: {
+    name: "Mantenimiento de Equipos",
+    desc: "Órdenes de trabajo preventivas y correctivas, con espera de repuestos y cierre verificado.",
+    meta: {
+      eyebrow: "Mantenimiento",
+      title: "Órdenes de Trabajo",
+      titleThin: "· Equipos",
+      subtitle: "Preventivo, correctivo y repuestos",
+      branch: "v1.0"
+    },
+    cols: [
+      { key: "backlog",    name: "Solicitudes" },
+      { key: "todo",       name: "Programadas" },
+      { key: "inprogress", name: "En ejecución" },
+      { key: "blocked",    name: "Esperando repuesto" },
+      { key: "done",       name: "Cerradas" }
+    ],
+    ws: [
+      { key: "PRE", label: "Preventivo",   color: "#3aa03a" },
+      { key: "COR", label: "Correctivo",   color: "#e5484d" },
+      { key: "CAL", label: "Calibración",  color: "#0a8fa6" },
+      { key: "INS", label: "Instalaciones", color: "#6b7a90" }
+    ],
+    cards: [
+      { id: "COR-1", ws: "COR", pri: "critica", col: "backlog",    t: "Compresor N.º 2 con ruido anormal", d: "**Equipo:** \n**Ubicación:** \n**Reportado por:** \n\nDetener si aumenta la temperatura.", labels: ["compresor"] },
+      { id: "PRE-1", ws: "PRE", pri: "media",   col: "todo",       t: "Mantención trimestral grupo electrógeno", d: "- [ ] Cambio de aceite y filtros\n- [ ] Revisar baterías\n- [ ] Prueba con carga 30 min", labels: ["trimestral"] },
+      { id: "CAL-1", ws: "CAL", pri: "alta",    col: "todo",       t: "Calibrar balanzas de bodega", d: "Certificado vence a fin de mes.", labels: ["certificacion"] },
+      { id: "PRE-2", ws: "PRE", pri: "media",   col: "inprogress", t: "Limpieza de filtros de aire acondicionado", d: "- [x] Piso 1\n- [ ] Piso 2\n- [ ] Piso 3", labels: ["climatizacion"] },
+      { id: "COR-2", ws: "COR", pri: "alta",    col: "blocked",    t: "Cinta transportadora detenida", d: "Rodamiento dañado. Repuesto pedido al proveedor; llega en 3 días.", labels: ["repuesto"] },
+      { id: "INS-1", ws: "INS", pri: "baja",    col: "done",       t: "Cambio de luminarias en pasillo", d: "Cerrada y verificada por jefatura de área." }
     ]
   },
 
@@ -169,10 +273,13 @@ export function applyTemplate(key) {
   // La plantilla nace con la revisión al día, así que el parche de migración
   // no correría: los sellos de flujo hay que ponerlos aquí o el tablero nuevo
   // arrancaría sin fecha de creación en ninguna tarjeta.
+  // Las columnas también: una plantilla sin columnas propias vuelve a las de
+  // fábrica, para no heredar los nombres de la plantilla anterior.
   setState(normalizeStamps({
     meta: clone(t.meta),
     ws: clone(t.ws),
     cards: clone(t.cards),
+    cols: normalizeCols(t.cols),
     rev: SEED_REV
   }), true);
 

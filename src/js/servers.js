@@ -11,10 +11,13 @@ import {
   fetchDeletedBoards, undeleteRemoteBoard, purgeRemoteBoard
 } from "./remote.js";
 import {
-  listBoards, listAllBoards, createBoard, patchBoardEntry, findRemoteEntry,
+  listBoards, createBoard, patchBoardEntry, findRemoteEntry,
   setActiveSlug, getBoardKey, deleteBoard
 } from "./boardselector.js";
-import { clearSnapshot, writeSnapshot } from "./sync.js";
+import {
+  writeSnapshot, detachServerBoards, reattachServerBoards, resumeAfterReattach,
+  expireSession, notifyBoardsChanged
+} from "./sync.js";
 import { blankState } from "./store.js";
 import { showToast } from "./toast.js";
 import { esc } from "./utils.js";
@@ -82,14 +85,24 @@ async function handleConnect() {
     const server = await login(url, username, password);
     passInput.value = "";
     setConnectMsg("", false);
-    showToast("Conectado a " + server.url + " como " + server.username, "success");
-    await renderServers();
-    if (typeof _onIndexChanged === "function") _onIndexChanged();
+    await afterLogin(server);
   } catch (err) {
     setConnectMsg(describeError(err), true);
   } finally {
     button.disabled = false;
   }
+}
+
+// Al entrar en un servidor se reenganchan los tableros que se desconectaron de
+// él (por sesión caducada o a mano). Su sincronización empieza reconciliando.
+async function afterLogin(server) {
+  const slugs = reattachServerBoards(server.id);
+  showToast("Conectado a " + server.url + " como " + server.username +
+    (slugs.length ? " · " + slugs.length + (slugs.length === 1 ? " tablero reconectado" : " tableros reconectados") : ""),
+    "success", 5000);
+  await renderServers();
+  if (typeof _onIndexChanged === "function") _onIndexChanged();
+  resumeAfterReattach(slugs);
 }
 
 function describeError(err) {
@@ -148,7 +161,11 @@ function buildServerBlock(server) {
 
   const outBtn = document.createElement("button");
   outBtn.className = "srv-btn";
-  outBtn.textContent = "Desconectar";
+  outBtn.textContent = isSessionValid(server) ? "Desconectar" : "Olvidar";
+  if (!isSessionValid(server)) {
+    outBtn.title = "Quitar este servidor de la lista. Sus tableros siguen como locales.";
+    newBtn.hidden = true;
+  }
   outBtn.addEventListener("click", function () { handleDisconnect(server); });
 
   actions.appendChild(newBtn);
@@ -170,7 +187,8 @@ async function loadServerBoards(server) {
   const list = block.querySelector(".srv-boards");
 
   if (!isSessionValid(server)) {
-    list.innerHTML = '<p class="bs-empty err">Sesión expirada. Vuelve a conectarte.</p>';
+    if (server.token) expireSession(server);
+    showReconnect(server, list);
     return;
   }
 
@@ -178,6 +196,11 @@ async function loadServerBoards(server) {
   try {
     boards = await fetchBoards(server);
   } catch (err) {
+    if (err instanceof RemoteError && err.isAuth) {
+      expireSession(server);
+      showReconnect(server, list);
+      return;
+    }
     const offline = err instanceof RemoteError && err.isOffline;
     list.innerHTML = '<p class="bs-empty' + (offline ? "" : " err") + '">' +
       esc(offline ? "Sin conexión. Los tableros ya abiertos siguen disponibles sin red."
@@ -198,6 +221,37 @@ async function loadServerBoards(server) {
   for (const board of boards) {
     list.appendChild(buildRemoteBoardRow(server, board));
   }
+}
+
+// Sesión caducada: la dirección y el usuario ya se saben, sólo falta la
+// contraseña. Al entrar se reenganchan los tableros que se desconectaron.
+function showReconnect(server, list) {
+  list.innerHTML =
+    '<p class="bs-empty err">Sesión expirada. Tus tableros de este servidor siguen aquí como locales ' +
+    'y se sincronizarán al volver a entrar.</p>' +
+    '<div class="srv-new srv-reconnect">' +
+    '<input type="password" class="ff-in" placeholder="Contraseña de ' + esc(server.username) + '" autocomplete="current-password">' +
+    '<button class="btn primary">Reconectar</button></div>' +
+    '<p class="importmsg srv-reconnect-msg"></p>';
+  const input = list.querySelector("input");
+  const btn = list.querySelector(".srv-reconnect button");
+  const msg = list.querySelector(".srv-reconnect-msg");
+  const submit = async function () {
+    if (!input.value) { input.focus(); return; }
+    btn.disabled = true;
+    msg.textContent = "Conectando…";
+    msg.classList.remove("err");
+    try {
+      const fresh = await login(server.url, server.username, input.value);
+      await afterLogin(fresh);
+    } catch (err) {
+      msg.textContent = describeError(err);
+      msg.classList.add("err");
+      btn.disabled = false;
+    }
+  };
+  btn.addEventListener("click", submit);
+  input.addEventListener("keydown", function (ev) { if (ev.key === "Enter") submit(); });
 }
 
 // Papelera del servidor: sólo trae algo para el dueño de un tablero eliminado.
@@ -435,7 +489,8 @@ function stripForLocal(serverState) {
     rev: serverState.rev || 2,
     meta: serverState.meta ? omit(serverState.meta, "v") : {},
     ws: (serverState.ws || []).map(function (w) { return omit(w, "v"); }),
-    cards: (serverState.cards || []).map(function (c) { return omit(c, "v"); })
+    cards: (serverState.cards || []).map(function (c) { return omit(c, "v"); }),
+    cols: Array.isArray(serverState.cols) ? serverState.cols.map(function (c) { return omit(c, "v"); }) : undefined
   };
 }
 
@@ -507,15 +562,12 @@ async function handleDeleteRemote(server, board) {
 }
 
 async function handleDisconnect(server) {
-  // Las copias locales se conservan: desconectarse no debe borrar trabajo.
-  for (const entry of listAllBoards()) {
-    if (entry.kind === "remote" && entry.remote && entry.remote.serverId === server.id) {
-      patchBoardEntry(entry.slug, { kind: "local", remote: null });
-      clearSnapshot(entry.slug);
-    }
-  }
+  // Las copias locales se conservan: desconectarse no debe borrar trabajo. Y
+  // recuerdan su enlace: al volver a conectar se reenganchan y sincronizan.
+  detachServerBoards(server.id);
+  notifyBoardsChanged();
   await logout(server);
-  showToast("Desconectado. Los tableros descargados quedaron como copias locales.", "info", 6000);
+  showToast("Desconectado. Los tableros descargados siguen como locales y se sincronizarán al volver a conectar.", "info", 7000);
   await renderServers();
   if (typeof _onIndexChanged === "function") _onIndexChanged();
 }

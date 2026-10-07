@@ -4,6 +4,37 @@ Formato: una entrada por día de trabajo, de lo más reciente a lo más antiguo.
 Se anotan los cambios visibles y las decisiones que condicionan el código
 futuro.
 
+## 2026-10-07 · reconexión automática, columnas y plantillas de operación
+
+### Añadido
+- **Desconexión automática al caducar la sesión.** Antes había que pulsar
+  «Desconectar» y volver a conectar, y los tableros compartidos se quedaban
+  como copias locales sueltas. Ahora pasan solos a locales, recuerdan su
+  servidor (distintivo «desconectado» en ⊞ Tableros e indicador en la
+  cabecera) y el bloque del servidor pide sólo la contraseña.
+- **Reenganche al volver a conectar**, también tras «Desconectar» a mano: los
+  tableros vuelven a ser compartidos y lo hecho mientras tanto se fusiona a
+  tres vías con lo que hizo el equipo, campo a campo.
+- **Conflictos decididos por el usuario.** Lo que cambió aquí y en el servidor
+  de forma distinta se muestra lado a lado («Mi versión» / «Versión del
+  servidor»); no se sube nada hasta decidir cada elemento.
+- **▥ Columnas**: nombre, posición de izquierda a derecha y color de cada
+  columna, por tablero. Se sincroniza, entra en la bitácora, viaja en el JSON
+  exportado y en los clones.
+- **Plantillas Soporte Técnico, Comerciales y Mantenimiento de Equipos**, con
+  sus propias columnas (p. ej. Recibidos · Clasificados · En atención ·
+  Esperando cliente · Resueltos).
+
+### Notas para quien siga
+- Un tablero desconectado guarda su enlace en `entry.detached` y conserva la
+  instantánea; al reengancharse lleva la marca `remote.reconcile` y su primer
+  contacto no sube nada hasta fusionar a tres vías (`threeWayMerge` en
+  `sync.js`). Mientras tanto genera ids aleatorios, como uno compartido.
+- `COLS` es un arreglo vivo que `store.js` reescribe en cada cambio de estado.
+  En el servidor la lista de columnas viaja entera con su versión (`colsV`).
+- Las claves de columna y su etapa siguen fijas: renombrar no cambia las
+  métricas. Añadir o quitar columnas queda fuera a propósito.
+
 ## 2026-09-08 · métricas de flujo
 
 ### Añadido

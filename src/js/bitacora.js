@@ -9,9 +9,6 @@ import { activeRemoteContext } from "./sync.js";
 import { fetchBoardLog, isSessionValid, RemoteError } from "./remote.js";
 import { esc } from "./utils.js";
 
-const COL_NAMES = {};
-COLS.forEach(function (c) { COL_NAMES[c.key] = c.name; });
-
 const FIELD_NAMES = {
   t: "título",
   d: "descripción",
@@ -26,7 +23,9 @@ const FIELD_NAMES = {
   title: "título",
   titleThin: "complemento",
   subtitle: "subtítulo",
-  branch: "rama"
+  branch: "rama",
+  name: "nombre",
+  order: "orden"
 };
 
 export function initBitacora() {
@@ -166,8 +165,10 @@ function verbOf(change) {
   return VERBS[change.action] || "·";
 }
 
+// Los nombres son los del tablero ahora mismo: las columnas se renombran.
 function colName(key) {
-  return COL_NAMES[key] || key || "—";
+  const col = COLS.find(function (c) { return c.key === key; });
+  return (col && col.name) || key || "—";
 }
 
 function fieldList(fields) {
@@ -203,6 +204,10 @@ function describe(change) {
     if (change.action === "add") return "añadió el frente " + title;
     if (change.action === "delete") return "eliminó el frente " + title;
     return "cambió " + esc(fieldList(change.fields)) + " del frente " + title;
+  }
+
+  if (change.kind === "cols") {
+    return "cambió las columnas · " + esc(fieldList(change.fields));
   }
 
   return "cambió el encabezado · " + esc(fieldList(change.fields));

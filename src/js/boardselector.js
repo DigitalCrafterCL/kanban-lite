@@ -293,6 +293,13 @@ export function renderBoardList() {
       badge.className = "bs-badge";
       badge.textContent = "compartido";
       nameBtn.appendChild(badge);
+    } else if (b.detached) {
+      // Era compartido y la sesión se cerró: se reengancha al reconectar.
+      const badge = document.createElement("span");
+      badge.className = "bs-badge bs-badge-detached";
+      badge.textContent = "desconectado";
+      badge.title = "Se sincronizará al volver a conectarte a su servidor";
+      nameBtn.appendChild(badge);
     }
 
     const metaEl = document.createElement("span");
@@ -306,6 +313,10 @@ export function renderBoardList() {
     if (remote) {
       const server = getServer(b.remote.serverId);
       metaEl.textContent += server ? " · " + server.username + "@" + server.url : " · servidor desconectado";
+    } else if (b.detached) {
+      const server = getServer(b.detached.serverId);
+      const donde = server ? server.username + "@" + server.url : String(b.detached.serverId || "").replace("#", " · ");
+      metaEl.textContent += " · pendiente de reconectar a " + donde;
     }
 
     const info = document.createElement("div");
@@ -469,6 +480,8 @@ export function cloneBoard(slug) {
       };
     })
   };
+  // Las columnas son la forma del tablero, no del ciclo: el clon las hereda.
+  if (Array.isArray(origen.cols)) estado.cols = clone(origen.cols);
 
   // El clon empieza otra vuelta del mismo trabajo: las tarjetas nacen hoy y
   // sin ciclo anterior. Como todas caen en Backlog, normalizeStamps las deja

@@ -3,21 +3,71 @@
 // Cycle Time aún no corre), "flow" y "blocked" son trabajo en curso —bloqueado
 // cuenta como WIP: el trabajo empezó y el reloj sigue corriendo— y "done" es
 // el final. Una columna nueva sin `stage` se trata como "queue".
-export const COLS = [
+//
+// Éstas son las columnas de fábrica. Cada tablero puede renombrarlas,
+// reordenarlas y recolorearlas (ver applyBoardCols), pero las claves y su
+// etapa son fijas: de ellas dependen las tarjetas y las métricas.
+export const DEFAULT_COLS = Object.freeze([
   { key: "backlog",    name: "Backlog",     kc: "var(--muted)",    wipLimit: 0, stage: "queue" },
   { key: "todo",       name: "Por hacer",   kc: "var(--pr-media)", wipLimit: 0, stage: "queue" },
   { key: "inprogress", name: "En progreso", kc: "var(--accent)",   wipLimit: 6, stage: "flow" },
   { key: "blocked",    name: "Bloqueado",   kc: "var(--ws-sec)",   wipLimit: 4, stage: "blocked" },
   { key: "done",       name: "Hecho",       kc: "var(--ws-rad)",   wipLimit: 0, stage: "done" }
-];
+].map(Object.freeze));
+
+// Columnas del tablero en memoria, en su orden. Es un arreglo VIVO: store.js
+// lo reescribe en su sitio cada vez que cambia el estado, así que quien lo
+// recorra ve siempre los nombres, el orden y los colores del tablero activo.
+export const COLS = DEFAULT_COLS.map(function (c) { return Object.assign({}, c); });
+
+export const MAX_COL_NAME = 30;
+const HEX_COLOR = /^#[0-9a-f]{6}$/i;
+
+// Normaliza la personalización de columnas de un tablero (`state.cols`):
+// sólo claves conocidas, sin duplicados, y las que falten se añaden al final
+// con sus valores de fábrica. Devuelve [{ key, name, color }], donde
+// `color` vacío significa «el de fábrica».
+export function normalizeCols(raw) {
+  const out = [];
+  const seen = new Set();
+  const byKey = {};
+  DEFAULT_COLS.forEach(function (c) { byKey[c.key] = c; });
+  (Array.isArray(raw) ? raw : []).forEach(function (c) {
+    if (!c || !byKey[c.key] || seen.has(c.key)) return;
+    seen.add(c.key);
+    const name = typeof c.name === "string" ? c.name.trim().slice(0, MAX_COL_NAME) : "";
+    out.push({
+      key: c.key,
+      name: name || byKey[c.key].name,
+      color: typeof c.color === "string" && HEX_COLOR.test(c.color) ? c.color.toLowerCase() : ""
+    });
+  });
+  DEFAULT_COLS.forEach(function (c) {
+    if (!seen.has(c.key)) out.push({ key: c.key, name: c.name, color: "" });
+  });
+  return out;
+}
+
+// Vuelca en COLS la personalización de un tablero (o la de fábrica si no
+// tiene ninguna).
+export function applyBoardCols(raw) {
+  const byKey = {};
+  DEFAULT_COLS.forEach(function (c) { byKey[c.key] = c; });
+  const next = normalizeCols(raw).map(function (c) {
+    const def = byKey[c.key];
+    return Object.assign({}, def, { name: c.name, color: c.color, kc: c.color || def.kc });
+  });
+  COLS.splice(0, COLS.length, ...next);
+  return COLS;
+}
 
 // Etapa de una columna por su clave. Vive aquí y no en metrics.js porque
 // normalizeStamps() la necesita y config.js no importa nada: si el rellenado
 // de sellos viviera en metrics.js habría ciclo de módulos (metrics.js importa
 // COLS).
 export function colStage(key) {
-  for (let i = 0; i < COLS.length; i++) {
-    if (COLS[i].key === key) return COLS[i].stage || "queue";
+  for (let i = 0; i < DEFAULT_COLS.length; i++) {
+    if (DEFAULT_COLS[i].key === key) return DEFAULT_COLS[i].stage || "queue";
   }
   return "queue";
 }

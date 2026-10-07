@@ -359,6 +359,7 @@ function createRouter(db, config) {
     state.ws = (state.ws || []).map(w => Object.assign({}, w, { v: nextVersion }));
     state.cards = (state.cards || []).map(c => Object.assign({}, c, { v: nextVersion }));
     state.deleted = [];
+    if (state.cols) state.colsV = nextVersion;
 
     db.prepare("UPDATE boards SET state = ?, version = ?, updated_at = ? WHERE id = ?")
       .run(JSON.stringify(state), nextVersion, Date.now(), board.id);
@@ -579,6 +580,7 @@ async function runBoardCommand(db, args) {
     state.ws = (state.ws || []).map(w => Object.assign({}, w, { v: nueva }));
     state.cards = (state.cards || []).map(c => Object.assign({}, c, { v: nueva }));
     state.deleted = [];
+    if (state.cols) state.colsV = nueva;
     db.prepare("UPDATE boards SET state = ?, version = ?, updated_at = ? WHERE id = ?")
       .run(JSON.stringify(state), nueva, Date.now(), board.id);
     console.log(`[ok] "${board.name}" restaurado desde v${args.toVersion} -> ahora v${nueva} ` +

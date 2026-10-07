@@ -352,3 +352,59 @@ test("un tablero guardado antes de los sellos no se marca entero como modificado
   // quemaría una versión por tarjeta en el primer contacto de cada cliente.
   assert.deepEqual(diffStates(board([card("FE-1"), card("BE-2")]), viejo), []);
 });
+
+// -- Columnas del tablero ---------------------------------------------------
+
+const COLS_A = [
+  { key: "todo", name: "Pendiente", color: "#3c74e0" },
+  { key: "backlog", name: "Ideas", color: "" },
+  { key: "inprogress", name: "En curso", color: "" },
+  { key: "blocked", name: "Bloqueado", color: "" },
+  { key: "done", name: "Listo", color: "#3AA03A" }
+];
+
+test("las columnas viajan como una pieza con su propia versión", () => {
+  const r = mergeBoard(board([card("FE-1")]), { cols: COLS_A }, 1, 2);
+  assert.ok(r.changed);
+  assert.deepEqual(r.conflicts, []);
+  assert.equal(r.state.colsV, 2);
+  assert.deepEqual(r.state.cols.map(c => c.key), ["todo", "backlog", "inprogress", "blocked", "done"],
+    "el orden se conserva tal cual");
+  assert.equal(r.state.cols[4].color, "#3aa03a", "el color se normaliza a minúsculas");
+
+  const again = mergeBoard(r.state, { cols: COLS_A }, 2, 3);
+  assert.equal(again.changed, false, "la misma lista no gasta una versión");
+});
+
+test("columnas: color que no es hexadecimal se descarta y el nombre se acota", () => {
+  const r = mergeBoard(board([]), {
+    cols: [{ key: "todo", name: "x".repeat(80), color: 'red" onmouseover="x' }]
+  }, 1, 2);
+  assert.equal(r.state.cols[0].color, "");
+  assert.equal(r.state.cols[0].name.length, 30);
+});
+
+test("columnas cambiadas por otro desde la base del cliente: conflicto", () => {
+  const s = mergeBoard(board([]), { cols: COLS_A }, 1, 2).state;
+  const otra = COLS_A.map(c => ({ ...c, name: c.name + "!" }));
+  const r = mergeBoard(s, { cols: otra }, 1, 3);
+  assert.deepEqual(r.conflicts, ["cols"]);
+  assert.equal(r.state.cols[0].name, "Pendiente!");
+});
+
+test("sanitizeState conserva las columnas al crear un tablero", () => {
+  const s = sanitizeState({ cols: COLS_A, ws: [], cards: [] }, 1);
+  assert.equal(s.cols.length, 5);
+  assert.equal(s.colsV, 1);
+  assert.equal(sanitizeState({ ws: [], cards: [] }, 1).cols, undefined, "sin columnas no inventa ninguna");
+});
+
+test("la bitácora registra el cambio de columnas", () => {
+  const prev = mergeBoard(board([]), { cols: COLS_A }, 1, 2).state;
+  const movidas = [COLS_A[1], COLS_A[0], ...COLS_A.slice(2)];
+  const next = mergeBoard(prev, { cols: movidas }, 2, 3).state;
+  const changes = diffStates(prev, next);
+  assert.equal(changes.length, 1);
+  assert.equal(changes[0].kind, "cols");
+  assert.deepEqual(changes[0].fields, ["order"]);
+});

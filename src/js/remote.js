@@ -50,6 +50,15 @@ export function serverId(url, username) {
   return normalizeUrl(url) + "#" + String(username || "").trim().toLowerCase();
 }
 
+// La sesión caducó (por reloj o porque el servidor respondió 401). Se olvida
+// el token pero se conserva el servidor: así la interfaz puede ofrecer volver
+// a entrar con la dirección y el usuario ya puestos.
+export function markSessionExpired(id) {
+  const server = getServer(id);
+  if (!server) return null;
+  return upsertServer({ id: id, token: "", expiresAt: 0, expired: true });
+}
+
 export function isSessionValid(server) {
   return Boolean(server && server.token && (!server.expiresAt || server.expiresAt > Date.now()));
 }
@@ -124,7 +133,8 @@ export async function login(url, username, password) {
     username: r.data.user.username,
     userId: r.data.user.id,
     token: r.data.token,
-    expiresAt: r.data.expiresAt
+    expiresAt: r.data.expiresAt,
+    expired: false
   });
 }
 
